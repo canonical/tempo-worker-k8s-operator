@@ -1,7 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# Comma-separated list of Mimir roles that this worker should fulfill.
+# Comma-separated list of Tempo roles that this worker should fulfill.
 # Possible roles are:
 # - "query-scheduler"
 # - "query-frontend"
@@ -12,14 +12,14 @@
 # - "ruler"
 # - "alertmanager"
 # - "compactor"
-# Note that for a mimir deployment to be valid, each one of these roles needs to be
+# Note that for a tempo deployment to be valid, each one of these roles needs to be
 # assigned to at least one worker node.
 #
 # Additionally, you can assign these optional roles:
 # - "overrides-exporter"
 # - "flusher"
 #
-# These roles are optional in that they're not required for a mimir
+# These roles are optional in that they're not required for a tempo
 # deployment to function.
 #
 # Supported meta-roles:
@@ -31,7 +31,7 @@
 
 
 options:
-  # Mimir roles
+  # Tempo roles
   role-compactor:
     description: >
       The compactor increases query performance and reduces long-term storage
@@ -82,13 +82,13 @@ options:
     default: false
   role-alertmanager:
     description: >
-      The Mimir Alertmanager is a component that accepts alert notifications
-      from the Mimir ruler.
+      The Tempo Alertmanager is a component that accepts alert notifications
+      from the Tempo ruler.
     type: boolean
     default: false
   role-overrides-exporter:
     description: >
-      Grafana Mimir supports applying overrides on a per-tenant basis. A number
+      Grafana Tempo supports applying overrides on a per-tenant basis. A number
       of overrides configure limits that prevent a single tenant from using too
       many resources. The overrides-exporter component exposes limits as
       Prometheus metrics so that operators can understand how close tenants are
@@ -117,19 +117,19 @@ options:
     default: false
   role-read:
     description: >
-      Meta-role that includes the Mimir components that belong to the "read 
+      Meta-role that includes the Tempo components that belong to the "read 
       path". It enables query-frontend and querier.
     type: boolean
     default: false
   role-write:
     description: >
-      Meta-role that includes the Mimir components that belong to the "write
+      Meta-role that includes the Tempo components that belong to the "write
       path". It enables distributor and ingester.
     type: boolean
     default: false
   role-backend:
     description: >
-      Meta-role that includes the Mimir components that belong to the "backend
+      Meta-role that includes the Tempo components that belong to the "backend
       path". It enables store-gateway, compactor, ruler, alertmanager, 
       query-scheduler, and overrides-exporter.
     type: boolean

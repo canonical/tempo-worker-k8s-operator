@@ -3,25 +3,25 @@
 import json
 
 import pytest
-from mimir_cluster import MimirClusterRequirerAppData, MimirRole
+from tempo_cluster import TempoClusterRequirerAppData, TempoRole
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from scenario import Container, ExecOutput, Relation, State
 
-from tests.scenario.conftest import MIMIR_VERSION_EXEC_OUTPUT
+from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
 def test_status_cannot_connect_no_relation(ctx, evt):
-    state_out = ctx.run(evt, state=State(containers=[Container("mimir", can_connect=False)]))
+    state_out = ctx.run(evt, state=State(containers=[Container("tempo", can_connect=False)]))
     assert state_out.unit_status == BlockedStatus(
-        "Missing mimir-cluster relation to a mimir-coordinator charm"
+        "Missing tempo-cluster relation to a tempo-coordinator charm"
     )
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
 def test_status_cannot_connect(ctx, evt):
     container = Container(
-        "mimir",
+        "tempo",
         can_connect=False,
         exec_mock={
             ("update-ca-certificates", "--fresh"): ExecOutput(),
@@ -32,10 +32,10 @@ def test_status_cannot_connect(ctx, evt):
         state=State(
             config={"role-ruler": True},
             containers=[container],
-            relations=[Relation("mimir-cluster")],
+            relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == WaitingStatus("Waiting for `mimir` container")
+    assert state_out.unit_status == WaitingStatus("Waiting for `tempo` container")
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -43,8 +43,8 @@ def test_status_no_config(ctx, evt):
     state_out = ctx.run(
         evt,
         state=State(
-            containers=[Container("mimir", can_connect=True)],
-            relations=[Relation("mimir-cluster")],
+            containers=[Container("tempo", can_connect=True)],
+            relations=[Relation("tempo-cluster")],
         ),
     )
     assert state_out.unit_status == BlockedStatus("No roles assigned: please configure some roles")
@@ -64,42 +64,42 @@ def test_status_no_config(ctx, evt):
 def test_pebble_ready_plan(ctx, roles):
     expected_plan = {
         "services": {
-            "mimir": {
+            "tempo": {
                 "override": "replace",
-                "summary": "mimir worker daemon",
-                "command": f"/bin/mimir --config.file=/etc/mimir/mimir-config.yaml -target {','.join(sorted(roles))} -auth.multitenancy-enabled=false",
+                "summary": "tempo worker daemon",
+                "command": f"/bin/tempo --config.file=/etc/tempo/tempo-config.yaml -target {','.join(sorted(roles))} -auth.multitenancy-enabled=false",
                 "startup": "enabled",
             }
         },
     }
 
-    mimir_container = Container(
-        "mimir",
+    tempo_container = Container(
+        "tempo",
         can_connect=True,
         exec_mock={
-            ("/bin/mimir", "-version"): MIMIR_VERSION_EXEC_OUTPUT,
+            ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
             ("update-ca-certificates", "--fresh"): ExecOutput(),
         },
     )
     state_out = ctx.run(
-        mimir_container.pebble_ready_event,
+        tempo_container.pebble_ready_event,
         state=State(
             config={f"role-{role}": True for role in roles},
-            containers=[mimir_container],
+            containers=[tempo_container],
             relations=[
                 Relation(
-                    "mimir-cluster",
+                    "tempo-cluster",
                     remote_app_data={
-                        "mimir_config": json.dumps({"alive": "beef"}),
+                        "tempo_config": json.dumps({"alive": "beef"}),
                     },
                 )
             ],
         ),
     )
 
-    mimir_container_out = state_out.get_container(mimir_container)
-    assert mimir_container_out.services.get("mimir").is_running() is True
-    assert mimir_container_out.plan.to_dict() == expected_plan
+    tempo_container_out = state_out.get_container(tempo_container)
+    assert tempo_container_out.services.get("tempo").is_running() is True
+    assert tempo_container_out.plan.to_dict() == expected_plan
 
     assert state_out.unit_status == ActiveStatus("")
 
@@ -107,23 +107,23 @@ def test_pebble_ready_plan(ctx, roles):
 @pytest.mark.parametrize(
     "roles_config, expected",
     (
-        ("querier", (MimirRole.querier,)),
-        ("querier,ingester", (MimirRole.querier, MimirRole.ingester)),
-        ("read,ingester", (MimirRole.query_frontend, MimirRole.querier, MimirRole.ingester)),
-        ("read", (MimirRole.query_frontend, MimirRole.querier)),
-        ("write", (MimirRole.distributor, MimirRole.ingester)),
+        ("querier", (TempoRole.querier,)),
+        ("querier,ingester", (TempoRole.querier, TempoRole.ingester)),
+        ("read,ingester", (TempoRole.query_frontend, TempoRole.querier, TempoRole.ingester)),
+        ("read", (TempoRole.query_frontend, TempoRole.querier)),
+        ("write", (TempoRole.distributor, TempoRole.ingester)),
         (
             "backend",
             (
-                MimirRole.store_gateway,
-                MimirRole.compactor,
-                MimirRole.ruler,
-                MimirRole.alertmanager,
-                MimirRole.query_scheduler,
-                MimirRole.overrides_exporter,
+                TempoRole.store_gateway,
+                TempoRole.compactor,
+                TempoRole.ruler,
+                TempoRole.alertmanager,
+                TempoRole.query_scheduler,
+                TempoRole.overrides_exporter,
             ),
         ),
-        ("all", tuple(MimirRole)),
+        ("all", tuple(TempoRole)),
     ),
 )
 def test_roles(ctx, roles_config, expected):
@@ -132,14 +132,14 @@ def test_roles(ctx, roles_config, expected):
         state=State(
             leader=True,
             config={f"role-{x}": True for x in roles_config.split(",")},
-            containers=[Container("mimir", can_connect=True)],
-            relations=[Relation("mimir-cluster")],
+            containers=[Container("tempo", can_connect=True)],
+            relations=[Relation("tempo-cluster")],
         ),
     )
     if expected:
-        data = MimirClusterRequirerAppData.load(
-            out.get_relations("mimir-cluster")[0].local_app_data
+        data = TempoClusterRequirerAppData.load(
+            out.get_relations("tempo-cluster")[0].local_app_data
         )
         assert set(data.roles) == set(expected)
     else:
-        assert not out.get_relations("mimir-cluster")[0].local_app_data
+        assert not out.get_relations("tempo-cluster")[0].local_app_data
