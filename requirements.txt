@@ -2,7 +2,7 @@ ops >= 1.5.0
 cosl
 
 # Charm relation interfaces
-pydantic
+pydantic>=2
 
 # lib/charms/tempo_k8s/v1/charm_tracing.py
-opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.21.0

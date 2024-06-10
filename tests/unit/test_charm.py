@@ -13,8 +13,8 @@ from ops.testing import Harness
 ops.testing.SIMULATE_CAN_CONNECT = True
 
 
-@patch("charm.TempoWorkerK8SOperatorCharm._tempo_version", property(lambda *_: "1.2.3"))
-@patch("charm.TempoWorkerK8SOperatorCharm.restart", lambda *_: True)
+@patch("tempo.Tempo.running_version", lambda *_: "1.2.3")
+@patch("tempo.Tempo.restart", lambda *_: True)
 class TestCharm(unittest.TestCase):
     def setUp(self, *unused):
         self.harness = Harness(TempoWorkerK8SOperatorCharm)
