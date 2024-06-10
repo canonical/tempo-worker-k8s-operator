@@ -4,17 +4,22 @@
 
 """This module contains an endpoint wrapper class for the requirer side of the ``tempo-cluster`` relation.
 
-As this relation is cluster-internal and not intended for third-party charms to interact with `tempo-coordinator-k8s`, its only user will be the tempo-worker-k8s charm. As such, it does not live in a charm lib as most other relation endpoint wrappers do.
+As this relation is cluster-internal and not intended for third-party charms to interact with
+`tempo-coordinator-k8s`, its only user will be the tempo-worker-k8s charm. As such,
+it does not live in a charm lib as most other relation endpoint wrappers do.
 """
 
 import json
 import logging
 from enum import Enum, unique
-from typing import Any, Dict, Iterable, List, MutableMapping, Optional, Set
+from typing import Any, Dict, MutableMapping, Optional, Tuple, cast
 from urllib.parse import urlparse
 
 import ops
 import pydantic
+
+# The only reason we need the tracing lib is this enum. Not super nice.
+from charms.tempo_k8s.v2.tracing import ReceiverProtocol
 from ops import EventSource, Object, ObjectEvents, RelationCreatedEvent
 from pydantic import BaseModel, ConfigDict
 
@@ -22,61 +27,29 @@ log = logging.getLogger("tempo_cluster")
 
 DEFAULT_ENDPOINT_NAME = "tempo-cluster"
 BUILTIN_JUJU_KEYS = {"ingress-address", "private-address", "egress-subnets"}
-TEMPO_CONFIG_FILE = "/etc/tempo/tempo-config.yaml"
-TEMPO_CERT_FILE = "/etc/tempo/server.cert"
-TEMPO_KEY_FILE = "/etc/tempo/private.key"
-TEMPO_CLIENT_CA_FILE = "/etc/tempo/ca.cert"
 
 
 # TODO: inherit enum.StrEnum when jammy is no longer supported.
 # https://docs.python.org/3/library/enum.html#enum.StrEnum
 @unique
 class TempoRole(str, Enum):
-    """Tempo component role names."""
+    """Tempo component role names.
 
-    overrides_exporter = "overrides-exporter"
-    query_scheduler = "query-scheduler"
-    flusher = "flusher"
-    query_frontend = "query-frontend"
+    References:
+     arch:
+      -> https://grafana.com/docs/tempo/latest/operations/architecture/
+     config:
+      -> https://grafana.com/docs/tempo/latest/configuration/#server
+    """
+
+    scaling_monolithic = "scaling-monolithic"  # default
     querier = "querier"
-    store_gateway = "store-gateway"
+    query_frontend = "query-frontend"
     ingester = "ingester"
     distributor = "distributor"
-    ruler = "ruler"
-    alertmanager = "alertmanager"
     compactor = "compactor"
-
-    # meta-roles
-    read = "read"
-    write = "write"
-    backend = "backend"
+    metrics_generator = "metrics-generator"
     all = "all"
-
-
-META_ROLES = {
-    TempoRole.read: (TempoRole.query_frontend, TempoRole.querier),
-    TempoRole.write: (TempoRole.distributor, TempoRole.ingester),
-    TempoRole.backend: (
-        TempoRole.store_gateway,
-        TempoRole.compactor,
-        TempoRole.ruler,
-        TempoRole.alertmanager,
-        TempoRole.query_scheduler,
-        TempoRole.overrides_exporter,
-    ),
-    TempoRole.all: list(TempoRole),
-}
-
-
-def expand_roles(roles: Iterable[TempoRole]) -> Set[TempoRole]:
-    """Expand any meta roles to their 'atomic' equivalents."""
-    expanded_roles = set()
-    for role in roles:
-        if role in META_ROLES:
-            expanded_roles.update(META_ROLES[role])
-        else:
-            expanded_roles.add(role)
-    return expanded_roles
 
 
 class ConfigReceivedEvent(ops.EventBase):
@@ -101,7 +74,7 @@ class ConfigReceivedEvent(ops.EventBase):
 
         Not meant to be called by charm code.
         """
-        self.relation = json.loads(snapshot["config"])
+        self.relation = json.loads(snapshot["config"])  # noqa
 
 
 class TempoClusterError(Exception):
@@ -132,16 +105,16 @@ class DatabagModel(BaseModel):
         populate_by_name=True,
         # Custom config key: whether to nest the whole datastructure (as json)
         # under a field or spread it out at the toplevel.
-        _NEST_UNDER=None,
+        _NEST_UNDER=None,  # noqa
     )  # type: ignore
     """Pydantic config."""
 
     @classmethod
     def load(cls, databag: MutableMapping[str, str]):
         """Load this model from a Juju databag."""
-        nest_under = cls.model_config.get("_NEST_UNDER")
+        nest_under = cls.model_config.get("_NEST_UNDER")  # noqa
         if nest_under:
-            return cls.parse_obj(json.loads(databag[nest_under]))
+            return cls.parse_obj(json.loads(databag[cast(str, nest_under)]))
 
         try:
             data = {k: json.loads(v) for k, v in databag.items() if k not in BUILTIN_JUJU_KEYS}
@@ -168,7 +141,7 @@ class DatabagModel(BaseModel):
 
         if databag is None:
             databag = {}
-        nest_under = self.model_config.get("_NEST_UNDER")
+        nest_under = self.model_config.get("_NEST_UNDER")  # noqa
         if nest_under:
             databag[nest_under] = self.json()
 
@@ -182,7 +155,7 @@ class DatabagModel(BaseModel):
 class TempoClusterRequirerAppData(DatabagModel):
     """TempoClusterRequirerAppData."""
 
-    roles: List[TempoRole]
+    role: TempoRole
 
 
 class TempoClusterRequirerUnitData(DatabagModel):
@@ -197,9 +170,7 @@ class TempoClusterProviderAppData(DatabagModel):
 
     tempo_config: Dict[str, Any]
     loki_endpoints: Optional[Dict[str, str]] = None
-    # todo: validate with
-    #  https://grafana.com/docs/tempo/latest/configure/about-configurations/#:~:text=Validate%20a%20configuration,or%20in%20a%20CI%20environment.
-    #  caveat: only the requirer node can do it
+    tempo_receiver: Optional[Dict[ReceiverProtocol, str]] = None
 
 
 class TempoClusterRemovedEvent(ops.EventBase):
@@ -302,15 +273,14 @@ class TempoClusterRequirer(Object):
             unit_databag = relation.data[self.model.unit]  # type: ignore # all checks are done in __init__
             databag_model.dump(unit_databag)
 
-    def publish_app_roles(self, roles: Iterable[TempoRole]):
-        """Publish this application's roles via the application databag."""
+    def publish_app_role(self, role: TempoRole):
+        """Publish this application's role via the application databag."""
         if not self._charm.unit.is_leader():
-            raise DatabagAccessPermissionError("only the leader unit can publish roles.")
+            raise DatabagAccessPermissionError("only the leader unit can publish role.")
 
         relation = self.relation
         if relation:
-            deduplicated_roles = list(expand_roles(roles))
-            databag_model = TempoClusterRequirerAppData(roles=deduplicated_roles)
+            databag_model = TempoClusterRequirerAppData(role=role)
             databag_model.dump(relation.data[self.model.app])
 
     def _get_data_from_coordinator(self) -> Optional[TempoClusterProviderAppData]:
@@ -326,6 +296,12 @@ class TempoClusterRequirer(Object):
                 log.info(f"invalid databag contents: {e}")
 
         return data
+
+    def get_tracing_endpoint(self, protocol: ReceiverProtocol) -> Optional[str]:
+        """Get the coordinator's receiver endpoint from the coordinator databag."""
+        data = self._get_data_from_coordinator()
+        if data and data.tempo_receiver:
+            return data.tempo_receiver.get(protocol)
 
     def get_tempo_config(self) -> Dict[str, Any]:
         """Fetch the tempo config from the coordinator databag."""
@@ -345,3 +321,29 @@ class TempoClusterRequirer(Object):
         """Fetch certificates secrets ids for the tempo config."""
         if self.relation and self.relation.app:
             return self.relation.data[self.relation.app].get("secrets", None)
+
+    def cert_secrets_ready(self):
+        """Check if cert secrets are ready."""
+        return self.get_cert_secret_ids() is not None
+
+    def get_privkey(self) -> Optional[str]:
+        """Get the private key from secret."""
+        secret_ids = self.get_cert_secret_ids()
+        if not secret_ids:
+            return None
+
+        cert_secrets = json.loads(secret_ids)
+        private_key_secret = self.model.get_secret(id=cert_secrets["private_key_secret_id"])
+        return private_key_secret.get_content().get("private-key")
+
+    def get_ca_and_server_certs(self) -> Tuple[Optional[str], Optional[str]]:
+        """Get the ca and server certs from secret."""
+        secret_ids = self.get_cert_secret_ids()
+        if not secret_ids:
+            return None, None
+
+        cert_secrets = json.loads(secret_ids)
+        ca_server_secret = self.model.get_secret(id=cert_secrets["ca_server_cert_secret_id"])
+        ca_cert = ca_server_secret.get_content().get("ca-cert")
+        server_cert = ca_server_secret.get_content().get("server-cert")
+        return ca_cert, server_cert
