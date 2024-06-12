@@ -173,6 +173,10 @@ class TempoClusterProviderAppData(DatabagModel):
 
     tempo_config: Dict[str, Any]
     loki_endpoints: Optional[Dict[str, str]] = None
+    ca_cert: Optional[str] = None
+    # plaintext cacert
+    privkey_secret_id: Optional[str] = None
+    # secret id containing a privkey
     tempo_receiver: Optional[Dict[ReceiverProtocol, str]] = None
 
 
@@ -320,33 +324,21 @@ class TempoClusterRequirer(Object):
             return data.loki_endpoints or {}
         return {}
 
-    def get_cert_secret_ids(self) -> Optional[str]:
-        """Fetch certificates secrets ids for the tempo config."""
-        if self.relation and self.relation.app:
-            return self.relation.data[self.relation.app].get("secrets", None)
-
-    def cert_secrets_ready(self):
-        """Check if cert secrets are ready."""
-        return self.get_cert_secret_ids() is not None
+    def get_ca_and_server_certs(self) -> Tuple[Optional[str], Optional[str]]:
+        """Fetch CA and server certificates."""
+        data = self._get_data_from_coordinator()
+        if data:
+            return data.ca_cert, data.server_cert
+        return None, None
 
     def get_privkey(self) -> Optional[str]:
-        """Get the private key from secret."""
-        secret_ids = self.get_cert_secret_ids()
-        if not secret_ids:
-            return None
+        """Fetch private key."""
+        data = self._get_data_from_coordinator()
+        if data:
+            secret_id = data.privkey_secret_id
+            if not secret_id:
+                return None
+            secret = self.model.get_secret(id=secret_id)
+            return secret.get_content().get("private-key")
 
-        cert_secrets = json.loads(secret_ids)
-        private_key_secret = self.model.get_secret(id=cert_secrets["private_key_secret_id"])
-        return private_key_secret.get_content().get("private-key")
-
-    def get_ca_and_server_certs(self) -> Tuple[Optional[str], Optional[str]]:
-        """Get the ca and server certs from secret."""
-        secret_ids = self.get_cert_secret_ids()
-        if not secret_ids:
-            return None, None
-
-        cert_secrets = json.loads(secret_ids)
-        ca_server_secret = self.model.get_secret(id=cert_secrets["ca_server_cert_secret_id"])
-        ca_cert = ca_server_secret.get_content().get("ca-cert")
-        server_cert = ca_server_secret.get_content().get("server-cert")
-        return ca_cert, server_cert
+        return
