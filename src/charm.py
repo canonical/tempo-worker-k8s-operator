@@ -198,9 +198,9 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
     def _update_tls_certificates(self) -> bool:
         # caller is responsible for guarding for container connectivity
-        if self.tempo_cluster.cert_secrets_ready():
+        if privkey := self.tempo_cluster.get_privkey():
             ca_cert, server_cert = self.tempo_cluster.get_ca_and_server_certs()
-            self.tempo.update_certs(self.tempo_cluster.get_privkey(), ca_cert, server_cert)
+            self.tempo.update_certs(privkey, ca_cert, server_cert)
             if ca_cert:
                 # update cacert in charm container too, for self-instrumentation
                 CA_CERT_PATH.write_text(ca_cert)
