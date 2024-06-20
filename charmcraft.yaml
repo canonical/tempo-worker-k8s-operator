@@ -58,7 +58,7 @@ config:
       description: |
         The role that this tempo worker will run with.
         Possible roles are:
-          - "scaling-monolithic" # default
+          - "all" # default, mapped to internal "scalable-single-binary" target in tempo workload
           - "querier"
           - "query-frontend"
           - "ingester"
@@ -67,8 +67,11 @@ config:
           - "metrics-generator"
         Note that for a tempo deployment to be valid, each one of these roles needs to be
         assigned to at least one worker node. Or, at least one node need to have the "all" role.
+        Also note that in the distributed tempo configuration, the `all` role translates into `scalable-single-binary`, 
+        effectively hiding the original Tempo `all` role (meaning non-scalable single monolithic binary). This choice 
+        was made to keep design compatibility with other distributed observability charms (mimir, loki).
       type: string
-      default: scaling-monolithic
+      default: all
 
 
 # build info

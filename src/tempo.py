@@ -36,6 +36,8 @@ class Tempo:
         calling this method.
         """
         role = self._role.value  # let it raise # type:ignore
+        if role == "all":
+            role = "scalable-single-binary"
         return {
             "summary": "tempo worker layer",
             "description": "pebble config layer for tempo worker",

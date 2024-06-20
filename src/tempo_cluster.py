@@ -40,9 +40,12 @@ class TempoRole(str, Enum):
       -> https://grafana.com/docs/tempo/latest/operations/architecture/
      config:
       -> https://grafana.com/docs/tempo/latest/configuration/#server
+
+    Note that in the distributed tempo configuration, the `all` role translates into `scalable-single-binary`,
+    effectively hiding the original Tempo `all` role (meaning non-scalable single monolithic binary). This choice was
+    made to keep design compatibility with other distributed observability charms (mimir, loki).
     """
 
-    scaling_monolithic = "scaling-monolithic"  # default
     querier = "querier"
     query_frontend = "query-frontend"
     ingester = "ingester"
