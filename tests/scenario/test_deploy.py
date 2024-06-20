@@ -76,7 +76,7 @@ def test_pebble_ready_plan(ctx, role):
             "tempo": {
                 "override": "replace",
                 "summary": "tempo worker process",
-                "command": f"/bin/tempo -config.file=/etc/tempo/tempo.yaml -target {role.value}",
+                "command": f"/bin/tempo -config.file=/etc/tempo/tempo.yaml -target {role.value if role != 'all' else 'scalable-single-binary'}",
                 "startup": "enabled",
             }
         },
