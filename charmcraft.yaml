@@ -58,7 +58,7 @@ config:
       description: |
         The role that this tempo worker will run with.
         Possible roles are:
-          - "scaling-monolithic" # default
+          - "scalable-single-binary" # default
           - "querier"
           - "query-frontend"
           - "ingester"
@@ -68,7 +68,7 @@ config:
         Note that for a tempo deployment to be valid, each one of these roles needs to be
         assigned to at least one worker node. Or, at least one node need to have the "all" role.
       type: string
-      default: scaling-monolithic
+      default: scalable-single-binary
 
 
 # build info

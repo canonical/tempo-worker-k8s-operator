@@ -42,7 +42,7 @@ class TempoRole(str, Enum):
       -> https://grafana.com/docs/tempo/latest/configuration/#server
     """
 
-    scaling_monolithic = "scaling-monolithic"  # default
+    scaling_monolithic = "scalable-single-binary"  # default
     querier = "querier"
     query_frontend = "query-frontend"
     ingester = "ingester"
