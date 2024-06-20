@@ -58,7 +58,7 @@ config:
       description: |
         The role that this tempo worker will run with.
         Possible roles are:
-          - "all" # default, mapped to internal "scalable-single-binary" role in tempo workload
+          - "all" # default, mapped to internal "scalable-single-binary" target in tempo workload
           - "querier"
           - "query-frontend"
           - "ingester"
