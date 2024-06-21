@@ -188,7 +188,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def _tempo_role(self) -> TempoRole:
         """Return the role that this Tempo worker should take on."""
         # collect-status will log an error and set blocked if the config is invalid
-        return TempoRole(self.config["role"])
+        return TempoRole(self.config.get("role", "all"))
 
     @property
     def tempo_role(self) -> Optional[TempoRole]:
