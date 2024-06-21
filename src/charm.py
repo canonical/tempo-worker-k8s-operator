@@ -106,7 +106,8 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
         self.tempo = Tempo(self._container, self.tempo_role, self.model)
 
-        self.unit.set_ports(8080)
+        # TODO take ports from tempo instead of using hardcoded ports set
+        self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096)
 
         self.topology = JujuTopology.from_charm(self)
         self.tempo_cluster = TempoClusterRequirer(self)
