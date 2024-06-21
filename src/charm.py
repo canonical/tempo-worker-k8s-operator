@@ -187,7 +187,10 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     @property
     def _tempo_role(self) -> TempoRole:
         """Return the role that this Tempo worker should take on."""
-        return TempoRole(self.config["role"])
+        role = self.config["role"]
+        if role == "all":
+            return TempoRole.all
+        return TempoRole(role)
 
     @property
     def tempo_role(self) -> Optional[TempoRole]:
@@ -241,7 +244,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             e.add_status(WaitingStatus("Waiting for coordinator to publish a tempo config"))
 
         if role := self.tempo_role:
-            e.add_status(ActiveStatus(f"{role.value} ready."))
+            e.add_status(ActiveStatus("(all roles)" if role is TempoRole.all else role.name))
         else:
             logger.error(
                 f"`role` config value {self.config.get('role')!r} invalid: should "
