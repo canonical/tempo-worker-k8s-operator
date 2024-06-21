@@ -47,7 +47,7 @@ class TempoRole(str, Enum):
     """
 
     # scalable-single-binary is a bit too long to type
-    all = "scalable-single-binary"  # default, meta-role.
+    all = "all"  # default, meta-role.
 
     querier = "querier"
     query_frontend = "query-frontend"
