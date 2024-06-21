@@ -12,7 +12,7 @@ it does not live in a charm lib as most other relation endpoint wrappers do.
 import json
 import logging
 from enum import Enum, unique
-from typing import Any, Dict, MutableMapping, Optional, Tuple, cast
+from typing import Any, Dict, MutableMapping, Optional, Tuple
 from urllib.parse import urlparse
 
 import ops
