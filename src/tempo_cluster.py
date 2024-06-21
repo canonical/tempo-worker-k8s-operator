@@ -12,7 +12,7 @@ it does not live in a charm lib as most other relation endpoint wrappers do.
 import json
 import logging
 from enum import Enum, unique
-from typing import Any, Dict, MutableMapping, Optional, Tuple, cast
+from typing import Any, Dict, MutableMapping, Optional, Tuple
 from urllib.parse import urlparse
 
 import ops
@@ -46,13 +46,26 @@ class TempoRole(str, Enum):
     made to keep design compatibility with other distributed observability charms (mimir, loki).
     """
 
+    # scalable-single-binary is a bit too long to type
+    all = "all"  # default, meta-role.
+
     querier = "querier"
     query_frontend = "query-frontend"
     ingester = "ingester"
     distributor = "distributor"
     compactor = "compactor"
     metrics_generator = "metrics-generator"
-    all = "all"
+
+    @property
+    def all_nonmeta(self):
+        return (
+            TempoRole.querier,
+            TempoRole.query_frontend,
+            TempoRole.ingester,
+            TempoRole.distributor,
+            TempoRole.compactor,
+            TempoRole.metrics_generator,
+        )
 
 
 class ConfigReceivedEvent(ops.EventBase):
@@ -100,59 +113,133 @@ class JujuTopology(pydantic.BaseModel):
     # ...
 
 
-class DatabagModel(BaseModel):
-    """Base databag model."""
+# DatabagModel implementation from traefik.v1.ingress charm lib.
+PYDANTIC_IS_V1 = int(pydantic.version.VERSION.split(".")[0]) < 2
+if PYDANTIC_IS_V1:
 
-    model_config = ConfigDict(
-        # Allow instantiating this class by field name (instead of forcing alias).
-        populate_by_name=True,
-        # Custom config key: whether to nest the whole datastructure (as json)
-        # under a field or spread it out at the toplevel.
-        _NEST_UNDER=None,  # noqa
-    )  # type: ignore
-    """Pydantic config."""
+    class DatabagModel(BaseModel):  # type: ignore
+        """Base databag model."""
 
-    @classmethod
-    def load(cls, databag: MutableMapping[str, str]):
-        """Load this model from a Juju databag."""
-        nest_under = cls.model_config.get("_NEST_UNDER")  # noqa
-        if nest_under:
-            return cls.parse_obj(json.loads(databag[cast(str, nest_under)]))
+        class Config:
+            """Pydantic config."""
 
-        try:
-            data = {k: json.loads(v) for k, v in databag.items() if k not in BUILTIN_JUJU_KEYS}
-        except json.JSONDecodeError as e:
-            msg = f"invalid databag contents: expecting json. {databag}"
-            log.info(msg)
-            raise DataValidationError(msg) from e
+            allow_population_by_field_name = True
+            """Allow instantiating this class by field name (instead of forcing alias)."""
 
-        try:
-            return cls.parse_raw(json.dumps(data))  # type: ignore
-        except pydantic.ValidationError as e:
-            msg = f"failed to validate databag: {databag}"
-            log.info(msg, exc_info=True)
-            raise DataValidationError(msg) from e
+        _NEST_UNDER = None
 
-    def dump(self, databag: Optional[MutableMapping[str, str]] = None, clear: bool = True):
-        """Write the contents of this model to Juju databag.
+        @classmethod
+        def load(cls, databag: MutableMapping):
+            """Load this model from a Juju databag."""
+            if cls._NEST_UNDER:
+                return cls.parse_obj(json.loads(databag[cls._NEST_UNDER]))
 
-        :param databag: the databag to write the data to.
-        :param clear: ensure the databag is cleared before writing it.
-        """
-        if clear and databag:
-            databag.clear()
+            try:
+                data = {
+                    k: json.loads(v)
+                    for k, v in databag.items()
+                    # Don't attempt to parse model-external values
+                    if k in {f.alias for f in cls.__fields__.values()}  # type: ignore
+                }
+            except json.JSONDecodeError as e:
+                msg = f"invalid databag contents: expecting json. {databag}"
+                log.error(msg)
+                raise DataValidationError(msg) from e
 
-        if databag is None:
-            databag = {}
-        nest_under = self.model_config.get("_NEST_UNDER")  # noqa
-        if nest_under:
-            databag[nest_under] = self.json()
+            try:
+                return cls.parse_raw(json.dumps(data))  # type: ignore
+            except pydantic.ValidationError as e:
+                msg = f"failed to validate databag: {databag}"
+                log.debug(msg, exc_info=True)
+                raise DataValidationError(msg) from e
 
-        dct = self.model_dump(by_alias=True)
-        for key, field in self.model_fields.items():  # type: ignore
-            value = dct[key]
-            databag[field.alias or key] = json.dumps(value)
-        return databag
+        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+            """Write the contents of this model to Juju databag.
+
+            :param databag: the databag to write the data to.
+            :param clear: ensure the databag is cleared before writing it.
+            """
+            if clear and databag:
+                databag.clear()
+
+            if databag is None:
+                databag = {}
+
+            if self._NEST_UNDER:
+                databag[self._NEST_UNDER] = self.json(by_alias=True, exclude_defaults=True)
+                return databag
+
+            for key, value in self.dict(by_alias=True, exclude_defaults=True).items():  # type: ignore
+                databag[key] = json.dumps(value)
+
+            return databag
+
+else:
+    from pydantic import ConfigDict
+
+    class DatabagModel(BaseModel):
+        """Base databag model."""
+
+        model_config = ConfigDict(
+            # tolerate additional keys in databag
+            extra="ignore",
+            # Allow instantiating this class by field name (instead of forcing alias).
+            populate_by_name=True,
+            # Custom config key: whether to nest the whole datastructure (as json)
+            # under a field or spread it out at the toplevel.
+            _NEST_UNDER=None,
+        )  # type: ignore
+        """Pydantic config."""
+
+        @classmethod
+        def load(cls, databag: MutableMapping):
+            """Load this model from a Juju databag."""
+            nest_under = cls.model_config.get("_NEST_UNDER")
+            if nest_under:
+                return cls.model_validate(json.loads(databag[nest_under]))  # type: ignore
+
+            try:
+                data = {
+                    k: json.loads(v)
+                    for k, v in databag.items()
+                    # Don't attempt to parse model-external values
+                    if k in {(f.alias or n) for n, f in cls.__fields__.items()}  # type: ignore
+                }
+            except json.JSONDecodeError as e:
+                msg = f"invalid databag contents: expecting json. {databag}"
+                log.error(msg)
+                raise DataValidationError(msg) from e
+
+            try:
+                return cls.model_validate_json(json.dumps(data))  # type: ignore
+            except pydantic.ValidationError as e:
+                msg = f"failed to validate databag: {databag}"
+                log.debug(msg, exc_info=True)
+                raise DataValidationError(msg) from e
+
+        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+            """Write the contents of this model to Juju databag.
+
+            :param databag: the databag to write the data to.
+            :param clear: ensure the databag is cleared before writing it.
+            """
+            if clear and databag:
+                databag.clear()
+
+            if databag is None:
+                databag = {}
+            nest_under = self.model_config.get("_NEST_UNDER")
+            if nest_under:
+                databag[nest_under] = self.model_dump_json(  # type: ignore
+                    by_alias=True,
+                    # skip keys whose values are default
+                    exclude_defaults=True,
+                )
+                return databag
+
+            dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)  # type: ignore
+            databag.update({k: json.dumps(v) for k, v in dct.items()})
+            return databag
 
 
 class TempoClusterRequirerAppData(DatabagModel):
@@ -173,6 +260,9 @@ class TempoClusterProviderAppData(DatabagModel):
 
     tempo_config: Dict[str, Any]
     loki_endpoints: Optional[Dict[str, str]] = None
+    ca_cert: Optional[str] = None
+    server_cert: Optional[str] = None
+    privkey_secret_id: Optional[str] = None
     tempo_receiver: Optional[Dict[ReceiverProtocol, str]] = None
 
 
@@ -320,33 +410,21 @@ class TempoClusterRequirer(Object):
             return data.loki_endpoints or {}
         return {}
 
-    def get_cert_secret_ids(self) -> Optional[str]:
-        """Fetch certificates secrets ids for the tempo config."""
-        if self.relation and self.relation.app:
-            return self.relation.data[self.relation.app].get("secrets", None)
-
-    def cert_secrets_ready(self):
-        """Check if cert secrets are ready."""
-        return self.get_cert_secret_ids() is not None
+    def get_ca_and_server_certs(self) -> Tuple[Optional[str], Optional[str]]:
+        """Fetch CA and server certificates."""
+        data = self._get_data_from_coordinator()
+        if data:
+            return data.ca_cert, data.server_cert
+        return None, None
 
     def get_privkey(self) -> Optional[str]:
-        """Get the private key from secret."""
-        secret_ids = self.get_cert_secret_ids()
-        if not secret_ids:
-            return None
+        """Fetch private key."""
+        data = self._get_data_from_coordinator()
+        if data:
+            secret_id = data.privkey_secret_id
+            if not secret_id:
+                return None
+            secret = self.model.get_secret(id=secret_id)
+            return secret.get_content().get("private-key")
 
-        cert_secrets = json.loads(secret_ids)
-        private_key_secret = self.model.get_secret(id=cert_secrets["private_key_secret_id"])
-        return private_key_secret.get_content().get("private-key")
-
-    def get_ca_and_server_certs(self) -> Tuple[Optional[str], Optional[str]]:
-        """Get the ca and server certs from secret."""
-        secret_ids = self.get_cert_secret_ids()
-        if not secret_ids:
-            return None, None
-
-        cert_secrets = json.loads(secret_ids)
-        ca_server_secret = self.model.get_secret(id=cert_secrets["ca_server_cert_secret_id"])
-        ca_cert = ca_server_secret.get_content().get("ca-cert")
-        server_cert = ca_server_secret.get_content().get("server-cert")
-        return ca_cert, server_cert
+        return
