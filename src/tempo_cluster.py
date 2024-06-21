@@ -42,14 +42,26 @@ class TempoRole(str, Enum):
       -> https://grafana.com/docs/tempo/latest/configuration/#server
     """
 
-    scaling_monolithic = "scaling-monolithic"  # default
+    # scalable-single-binary is a bit too long to type
+    all = "scalable-single-binary"  # default, meta-role.
+
     querier = "querier"
     query_frontend = "query-frontend"
     ingester = "ingester"
     distributor = "distributor"
     compactor = "compactor"
     metrics_generator = "metrics-generator"
-    all = "all"
+
+    @property
+    def all_nonmeta(self):
+        return (
+            TempoRole.querier,
+            TempoRole.query_frontend,
+            TempoRole.ingester,
+            TempoRole.distributor,
+            TempoRole.compactor,
+            TempoRole.metrics_generator,
+        )
 
 
 class ConfigReceivedEvent(ops.EventBase):
