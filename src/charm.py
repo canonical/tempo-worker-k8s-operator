@@ -186,10 +186,8 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     @property
     def _tempo_role(self) -> TempoRole:
         """Return the role that this Tempo worker should take on."""
-        role = self.config["role"]
-        if role == "all":
-            return TempoRole.all
-        return TempoRole(role)
+        # collect-status will log an error and set blocked if the config is invalid
+        return TempoRole(self.config["role"])
 
     @property
     def tempo_role(self) -> Optional[TempoRole]:
@@ -247,7 +245,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         else:
             logger.error(
                 f"`role` config value {self.config.get('role')!r} invalid: should "
-                f"be one of {[r.value for r in TempoRole]}."
+                f"be one of {list(TempoRole)}."
             )
             e.add_status(
                 BlockedStatus(f"Invalid `role` config value: {self.config.get('role')!r}.")
