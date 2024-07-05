@@ -15,6 +15,7 @@ from enum import Enum, unique
 from typing import Any, Dict, MutableMapping, Optional, Tuple
 from urllib.parse import urlparse
 
+from cosl import JujuTopology
 import ops
 import pydantic
 
@@ -105,12 +106,14 @@ class DatabagAccessPermissionError(TempoClusterError):
     """Raised when a follower attempts to write leader settings."""
 
 
-class JujuTopology(pydantic.BaseModel):
-    """JujuTopology."""
+class _JujuTopologyModel(pydantic.BaseModel):
+    """_JujuTopologyModel."""
 
     model: str
+    model_uuid: str
+    application: str
+    charm_name: str
     unit: str
-    # ...
 
 
 # DatabagModel implementation from traefik.v1.ingress charm lib.
@@ -251,7 +254,7 @@ class TempoClusterRequirerAppData(DatabagModel):
 class TempoClusterRequirerUnitData(DatabagModel):
     """TempoClusterRequirerUnitData."""
 
-    juju_topology: JujuTopology
+    juju_topology: _JujuTopologyModel
     address: str
 
 
@@ -294,7 +297,7 @@ class TempoClusterRequirer(Object):
     ):
         super().__init__(charm, key or endpoint)
         self._charm = charm
-        self.juju_topology = {"unit": self.model.unit.name, "model": self.model.name}
+        self.juju_topology = JujuTopology.from_charm(self._charm)
         relation = self.model.get_relation(endpoint)
         # filter out common unhappy relation states
         self.relation: Optional[ops.Relation] = (
@@ -358,7 +361,7 @@ class TempoClusterRequirer(Object):
             raise ValueError(f"{url} is an invalid url") from e
 
         databag_model = TempoClusterRequirerUnitData(
-            juju_topology=self.juju_topology,  # type: ignore
+            juju_topology=dict(self.juju_topology.as_dict()),  # type: ignore
             address=url,
         )
         relation = self.relation

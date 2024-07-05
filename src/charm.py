@@ -245,7 +245,11 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             e.add_status(WaitingStatus("Waiting for coordinator to publish a tempo config"))
 
         if role := self.tempo_role:
-            e.add_status(ActiveStatus("(all roles)" if role is TempoRole.all else role.name))
+            e.add_status(
+                ActiveStatus(
+                    "(all roles) ready." if role is TempoRole.all else f"{role.name} ready."
+                )
+            )
         else:
             logger.error(
                 f"`role` config value {self.config.get('role')!r} invalid: should "
