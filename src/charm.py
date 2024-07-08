@@ -187,7 +187,11 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     @property
     def _tempo_role(self) -> TempoRole:
         """Return the role that this Tempo worker should take on."""
-        return TempoRole(self.config["role"])
+        # collect-status will log an error and set blocked if the config is invalid
+        cfg = self.config.get("role")
+        if cfg in ("all", None):
+            return TempoRole.all
+        return TempoRole(cfg)
 
     @property
     def tempo_role(self) -> Optional[TempoRole]:
@@ -199,9 +203,9 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
     def _update_tls_certificates(self) -> bool:
         # caller is responsible for guarding for container connectivity
-        if self.tempo_cluster.cert_secrets_ready():
+        if privkey := self.tempo_cluster.get_privkey():
             ca_cert, server_cert = self.tempo_cluster.get_ca_and_server_certs()
-            self.tempo.update_certs(self.tempo_cluster.get_privkey(), ca_cert, server_cert)
+            self.tempo.update_certs(privkey, ca_cert, server_cert)
             if ca_cert:
                 # update cacert in charm container too, for self-instrumentation
                 CA_CERT_PATH.write_text(ca_cert)
@@ -241,11 +245,15 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             e.add_status(WaitingStatus("Waiting for coordinator to publish a tempo config"))
 
         if role := self.tempo_role:
-            e.add_status(ActiveStatus(f"{role.value} ready."))
+            e.add_status(
+                ActiveStatus(
+                    "(all roles) ready." if role is TempoRole.all else f"{role.name} ready."
+                )
+            )
         else:
             logger.error(
                 f"`role` config value {self.config.get('role')!r} invalid: should "
-                f"be one of {[r.value for r in TempoRole]}."
+                f"be one of {list(TempoRole)}."
             )
             e.add_status(
                 BlockedStatus(f"Invalid `role` config value: {self.config.get('role')!r}.")

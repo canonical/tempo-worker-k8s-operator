@@ -110,7 +110,10 @@ def test_pebble_ready_plan(ctx, role):
     assert tempo_container_out.services.get("tempo").is_running() is True
     assert tempo_container_out.plan.to_dict() == expected_plan
 
-    assert state_out.unit_status == ActiveStatus(f"{role.value} ready.")
+    if role.value == "all":
+        assert state_out.unit_status == ActiveStatus("(all roles) ready.")
+    else:
+        assert state_out.unit_status == ActiveStatus(f"{role.name} ready.")
 
 
 @pytest.mark.parametrize(
