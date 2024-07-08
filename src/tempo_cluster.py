@@ -347,7 +347,8 @@ class TempoClusterRequirer(Object):
 
         try:
             TempoClusterRequirerUnitData.load(unit_data)
-            TempoClusterRequirerAppData.load(app_data)
+            if self._charm.unit.is_leader():
+                TempoClusterRequirerAppData.load(app_data)
         except DataValidationError as e:
             log.info(f"invalid databag contents: {e}")
             return False
