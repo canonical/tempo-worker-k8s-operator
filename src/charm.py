@@ -21,14 +21,13 @@ from ops.charm import CharmBase, CollectStatusEvent
 from ops.framework import BoundEvent, Object
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from tempo import Tempo
+from tempo import Tempo, TEMPO_CA_FILE
 from tempo_cluster import (
     ConfigReceivedEvent,
     TempoClusterRequirer,
     TempoRole,
 )
 
-CA_CERT_PATH = Path("/usr/local/share/ca-certificates/ca.crt")
 
 TEMPO_DIR = "/tempo"
 
@@ -208,7 +207,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             self.tempo.update_certs(privkey, ca_cert, server_cert)
             if ca_cert:
                 # update cacert in charm container too, for self-instrumentation
-                CA_CERT_PATH.write_text(ca_cert)
+                Path(TEMPO_CA_FILE).write_text(ca_cert)
                 subprocess.run(["update-ca-certificates", "--fresh"])
             return True
 
@@ -216,7 +215,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             self.tempo.clear_certs()
 
             # clear from charm container too
-            CA_CERT_PATH.unlink(missing_ok=True)
+            Path(TEMPO_CA_FILE).unlink(missing_ok=True)
             subprocess.run(["update-ca-certificates", "--fresh"])
             return True
 
@@ -267,7 +266,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     @property
     def ca_cert_path(self) -> Optional[str]:
         """CA certificate path for tls tracing."""
-        return str(CA_CERT_PATH) if CA_CERT_PATH.exists() else None
+        return TEMPO_CA_FILE if Path(TEMPO_CA_FILE).exists() else None
 
 
 if __name__ == "__main__":  # pragma: nocover
