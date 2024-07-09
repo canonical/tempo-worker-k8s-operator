@@ -13,9 +13,9 @@ from tempo_cluster import TempoRole
 logger = logging.getLogger(__name__)
 
 TEMPO_CONFIG_FILE = "/etc/tempo/tempo.yaml"
-TEMPO_CERT_FILE = "/etc/tempo/server.cert"
-TEMPO_KEY_FILE = "/etc/tempo/private.key"
-TEMPO_CLIENT_CA_FILE = "/etc/tempo/ca.cert"
+TEMPO_CERT_FILE = "/etc/tempo/tls/server.crt"
+TEMPO_KEY_FILE = "/etc/tempo/tls/server.key"
+TEMPO_CA_FILE = "/usr/local/share/ca-certificates/ca.crt"
 
 
 class Tempo:
@@ -153,7 +153,7 @@ class Tempo:
         """Save all secrets and certificates to the workload container."""
         self._container.push(TEMPO_CERT_FILE, server_cert or "", make_dirs=True)
         self._container.push(TEMPO_KEY_FILE, private_key or "", make_dirs=True)
-        self._container.push(TEMPO_CLIENT_CA_FILE, ca_cert or "", make_dirs=True)
+        self._container.push(TEMPO_CA_FILE, ca_cert or "", make_dirs=True)
 
         self._container.exec(["update-ca-certificates", "--fresh"]).wait()
 
@@ -161,6 +161,6 @@ class Tempo:
         """Remove all secrets and certs from the workload container."""
         self._container.remove_path(TEMPO_CERT_FILE, recursive=True)
         self._container.remove_path(TEMPO_KEY_FILE, recursive=True)
-        self._container.remove_path(TEMPO_CLIENT_CA_FILE, recursive=True)
+        self._container.remove_path(TEMPO_CA_FILE, recursive=True)
 
         self._container.exec(["update-ca-certificates", "--fresh"]).wait()
