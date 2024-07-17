@@ -55,7 +55,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     @property
     def ca_cert_path(self) -> Optional[str]:
         """CA certificate path for tls tracing."""
-        return CLIENT_CA_FILE if Path(CLIENT_CA_FILE).exists() else None
+        return CLIENT_CA_FILE
 
     def pebble_layer(self, worker: Worker) -> Layer:
         """Return a dictionary representing a Pebble layer.
