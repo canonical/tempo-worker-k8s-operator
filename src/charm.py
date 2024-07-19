@@ -9,14 +9,15 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 
 import logging
-from pathlib import Path
 from typing import Optional
+from ops.model import  BlockedStatus
 
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from ops.charm import CharmBase
 from ops.main import main
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker, CLIENT_CA_FILE
 from ops.pebble import Layer
+from ops import CollectStatusEvent
 
 
 # Log messages can be retrieved using juju debug-log
@@ -32,6 +33,9 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
     _name = "tempo"
     _instance_addr = "127.0.0.1"
+    _valid_roles = [
+         "all", "querier", "query-frontend", "ingester", "distributor", "compactor", "metrics-generator"
+    ]
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -43,8 +47,22 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             charm=self,
             name="tempo",
             pebble_layer=self.pebble_layer,
-            endpoints={"cluster": "tempo-cluster"},
+            endpoints={"cluster": "tempo-cluster"},  # type: ignore
         )
+        self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+
+
+    def _on_collect_status(self, e: CollectStatusEvent):
+        self.worker._on_collect_status(e)
+        # add Tempo worker custom blocking conditions
+        if self.worker.roles and self.worker.roles[0] not in self._valid_roles:
+            logger.error(
+                f"`role` config value {self.config.get('role')!r} invalid: should "
+                f"be one of {(self._valid_roles)}."
+            )
+            e.add_status(
+                BlockedStatus(f"Invalid `role` config value: {self.config.get('role')!r}.")
+            )
 
     @property
     def tempo_endpoint(self) -> Optional[str]:
