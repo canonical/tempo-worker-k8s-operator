@@ -14,9 +14,7 @@ from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
 def test_status_cannot_connect_no_relation(ctx, evt):
     state_out = ctx.run(evt, state=State(containers=[Container("tempo", can_connect=False)]))
-    assert state_out.unit_status == BlockedStatus(
-        "Missing relation to a coordinator charm"
-    )
+    assert state_out.unit_status == BlockedStatus("Missing relation to a coordinator charm")
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -48,9 +46,7 @@ def test_status_no_config(ctx, evt):
             relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == WaitingStatus(
-        "Waiting for coordinator to publish a config"
-    )
+    assert state_out.unit_status == WaitingStatus("Waiting for coordinator to publish a config")
 
 
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
@@ -69,8 +65,14 @@ def test_status_bad_config(ctx):
 @pytest.mark.parametrize(
     "role",
     [
-        "all", "querier", "query-frontend", "ingester", "distributor", "compactor", "metrics-generator"
-    ]
+        "all",
+        "querier",
+        "query-frontend",
+        "ingester",
+        "distributor",
+        "compactor",
+        "metrics-generator",
+    ],
 )
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 def test_pebble_ready_plan(ctx, role):
@@ -142,9 +144,7 @@ def test_role(ctx, role_str, expected):
         ),
     )
     if expected:
-        data = ClusterRequirerAppData.load(
-            out.get_relations("tempo-cluster")[0].local_app_data
-        )
+        data = ClusterRequirerAppData.load(out.get_relations("tempo-cluster")[0].local_app_data)
         assert data.role == expected
     else:
         assert not out.get_relations("tempo-cluster")[0].local_app_data

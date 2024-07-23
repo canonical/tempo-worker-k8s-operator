@@ -10,7 +10,7 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 
 import logging
 from typing import Optional
-from ops.model import  BlockedStatus
+from ops.model import BlockedStatus
 
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from ops.charm import CharmBase
@@ -34,7 +34,13 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     _name = "tempo"
     _instance_addr = "127.0.0.1"
     _valid_roles = [
-         "all", "querier", "query-frontend", "ingester", "distributor", "compactor", "metrics-generator"
+        "all",
+        "querier",
+        "query-frontend",
+        "ingester",
+        "distributor",
+        "compactor",
+        "metrics-generator",
     ]
 
     def __init__(self, *args):
@@ -50,7 +56,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-
 
     def _on_collect_status(self, e: CollectStatusEvent):
         self.worker._on_collect_status(e)
