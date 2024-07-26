@@ -58,13 +58,8 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
 
     def _on_collect_status(self, e: CollectStatusEvent):
-        self.worker._on_collect_status(e)
         # add Tempo worker custom blocking conditions
         if self.worker.roles and self.worker.roles[0] not in self._valid_roles:
-            logger.error(
-                f"`role` config value {self.config.get('role')!r} invalid: should "
-                f"be one of {(self._valid_roles)}."
-            )
             e.add_status(
                 BlockedStatus(f"Invalid `role` config value: {self.config.get('role')!r}.")
             )
@@ -86,9 +81,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         Caller is responsible for checking whether the tempo role is valid before
         calling this method.
         """
-        role = "".join(worker.roles)
-        if role == "all":
-            role = "scalable-single-binary"
+        role = "scalable-single-binary" if "all" in worker.roles else "".join(worker.roles)
         return Layer(
             {
                 "summary": "tempo worker layer",
