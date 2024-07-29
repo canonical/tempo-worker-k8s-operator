@@ -53,7 +53,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         super().__init__(*args)
 
         # TODO take ports from tempo instead of using hardcoded ports set
-        self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096)
+        self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096, 14250)
 
         self.worker = Worker(
             charm=self,
