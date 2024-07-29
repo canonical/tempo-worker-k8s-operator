@@ -7,7 +7,7 @@ This charm deploys a Tempo worker application on k8s Juju models.
 
 Integrate it with a `tempo-k8s` coordinator unit to start.
 """
-
+from pathlib import Path
 import logging
 from typing import Optional
 from ops.model import BlockedStatus
@@ -15,13 +15,15 @@ from ops.model import BlockedStatus
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from ops.charm import CharmBase
 from ops.main import main
-from cosl.coordinated_workers.worker import CONFIG_FILE, Worker, CLIENT_CA_FILE
+from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops.pebble import Layer
 from ops import CollectStatusEvent
 
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
+
+CA_PATH = "/usr/local/share/ca-certificates/ca.crt"
 
 
 @trace_charm(
@@ -73,7 +75,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     @property
     def ca_cert_path(self) -> Optional[str]:
         """CA certificate path for tls tracing."""
-        return CLIENT_CA_FILE
+        return CA_PATH if Path(CA_PATH).exists() else None
 
     def pebble_layer(self, worker: Worker) -> Layer:
         """Return a dictionary representing a Pebble layer.
