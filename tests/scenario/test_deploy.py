@@ -51,15 +51,17 @@ def test_status_no_config(ctx, evt):
 
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 def test_status_bad_config(ctx):
-    state_out = ctx.run(
-        "config-changed",
-        state=State(
-            config={"role": "beeef"},
-            containers=[Container("tempo", can_connect=True)],
-            relations=[Relation("tempo-cluster")],
-        ),
-    )
-    assert state_out.unit_status == BlockedStatus("Invalid `role` config value: 'beeef'.")
+
+    with pytest.raises(Exception):
+
+        ctx.run(
+            "config-changed",
+            state=State(
+                config={"role": "beeef"},
+                containers=[Container("tempo", can_connect=True)],
+                relations=[Relation("tempo-cluster")],
+            ),
+        )
 
 
 @pytest.mark.parametrize(
