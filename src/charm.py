@@ -76,7 +76,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def tempo_endpoint(self) -> Optional[str]:
         """Tempo endpoint for charm tracing."""
         if endpoints := self.worker.cluster.get_tracing_receivers():
-            return endpoints.get("otlp_http", None)
+            return endpoints.get("otlp_http")
 
     @property
     def ca_cert_path(self) -> Optional[str]:
