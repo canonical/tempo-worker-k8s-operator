@@ -1,12 +1,12 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from scenario import Container, ExecOutput, Relation, State
-from tempo_cluster import TempoClusterRequirerAppData, TempoRole
+from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
 
 from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
 
@@ -14,9 +14,7 @@ from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
 def test_status_cannot_connect_no_relation(ctx, evt):
     state_out = ctx.run(evt, state=State(containers=[Container("tempo", can_connect=False)]))
-    assert state_out.unit_status == BlockedStatus(
-        "Missing tempo-cluster relation to a tempo-coordinator charm"
-    )
+    assert state_out.unit_status == BlockedStatus("Missing relation to a coordinator charm")
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -48,35 +46,44 @@ def test_status_no_config(ctx, evt):
             relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == WaitingStatus(
-        "Waiting for coordinator to publish a tempo config"
-    )
+    assert state_out.unit_status == WaitingStatus("Waiting for coordinator to publish a config")
 
 
+@patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 def test_status_bad_config(ctx):
-    state_out = ctx.run(
-        "config-changed",
-        state=State(
-            config={"role": "beeef"},
-            containers=[Container("tempo", can_connect=True)],
-            relations=[Relation("tempo-cluster")],
-        ),
-    )
-    assert state_out.unit_status == BlockedStatus("Invalid `role` config value: 'beeef'.")
+
+    with pytest.raises(Exception):
+
+        ctx.run(
+            "config-changed",
+            state=State(
+                config={"role": "beeef"},
+                containers=[Container("tempo", can_connect=True)],
+                relations=[Relation("tempo-cluster")],
+            ),
+        )
 
 
 @pytest.mark.parametrize(
     "role",
-    list(TempoRole),
+    [
+        "all",
+        "querier",
+        "query-frontend",
+        "ingester",
+        "distributor",
+        "compactor",
+        "metrics-generator",
+    ],
 )
-@patch("tempo.Tempo.is_configured", new=lambda _: False)
+@patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 def test_pebble_ready_plan(ctx, role):
     expected_plan = {
         "services": {
             "tempo": {
                 "override": "replace",
                 "summary": "tempo worker process",
-                "command": f"/bin/tempo -config.file=/etc/tempo/tempo.yaml -target {role.value if role != 'all' else 'scalable-single-binary'}",
+                "command": f"/bin/tempo -config.file=/etc/worker/config.yaml -target {role if role != 'all' else 'scalable-single-binary'}",
                 "startup": "enabled",
             }
         },
@@ -110,22 +117,22 @@ def test_pebble_ready_plan(ctx, role):
     assert tempo_container_out.services.get("tempo").is_running() is True
     assert tempo_container_out.plan.to_dict() == expected_plan
 
-    if role.value == "all":
+    if role == "all":
         assert state_out.unit_status == ActiveStatus("(all roles) ready.")
     else:
-        assert state_out.unit_status == ActiveStatus(f"{role.name} ready.")
+        assert state_out.unit_status == ActiveStatus(f"{role} ready.")
 
 
 @pytest.mark.parametrize(
     "role_str, expected",
     (
-        ("all", TempoRole.all),
-        ("querier", TempoRole.querier),
-        ("query-frontend", TempoRole.query_frontend),
-        ("ingester", TempoRole.ingester),
-        ("distributor", TempoRole.distributor),
-        ("compactor", TempoRole.compactor),
-        ("metrics-generator", TempoRole.metrics_generator),
+        ("all", "all"),
+        ("querier", "querier"),
+        ("query-frontend", "query-frontend"),
+        ("ingester", "ingester"),
+        ("distributor", "distributor"),
+        ("compactor", "compactor"),
+        ("metrics-generator", "metrics-generator"),
     ),
 )
 def test_role(ctx, role_str, expected):
@@ -139,9 +146,7 @@ def test_role(ctx, role_str, expected):
         ),
     )
     if expected:
-        data = TempoClusterRequirerAppData.load(
-            out.get_relations("tempo-cluster")[0].local_app_data
-        )
+        data = ClusterRequirerAppData.load(out.get_relations("tempo-cluster")[0].local_app_data)
         assert data.role == expected
     else:
         assert not out.get_relations("tempo-cluster")[0].local_app_data
