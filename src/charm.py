@@ -53,7 +53,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         super().__init__(*args)
 
         # TODO take ports from tempo instead of using hardcoded ports set
-        self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096)
+        self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096, 14250)
 
         self.worker = Worker(
             charm=self,
@@ -76,7 +76,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def tempo_endpoint(self) -> Optional[str]:
         """Tempo endpoint for charm tracing."""
         if endpoints := self.worker.cluster.get_tracing_receivers():
-            return endpoints.get("otlp_http", None)
+            return endpoints.get("otlp_http")
 
     @property
     def ca_cert_path(self) -> Optional[str]:
