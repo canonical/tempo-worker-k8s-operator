@@ -54,25 +54,94 @@ resources:
 
 config:
   options:
-    role:
+    role-all:
+      type: boolean
+      default: true
       description: |
-        The role that this tempo worker will run with.
-        Possible roles are:
-          - "all" # default, mapped to internal "scalable-single-binary" target in tempo workload
-          - "querier"
-          - "query-frontend"
-          - "ingester"
-          - "distributor"
-          - "compactor"
-          - "metrics-generator"
-        Note that for a tempo deployment to be valid, each one of these roles needs to be
-        assigned to at least one worker node. Or, at least one node need to have the "all" role.
-        Also note that in the distributed tempo configuration, the `all` role translates into `scalable-single-binary`, 
-        effectively hiding the original Tempo `all` role (meaning non-scalable single monolithic binary). This choice 
-        was made to keep design compatibility with other distributed observability charms (mimir, loki).
-      type: string
-      default: all
+        Configure the application to run with all roles enabled. This is the default configuration. 
+        This is a meta-role that configures the application to enable all other roles. Under the hood, the `all` role
+        is mapped to Tempo's `scalable-single-binary`.
+             
+        Each Tempo application can only have exactly one `role-X` config set to `true` at any given time. 
+        So if you want to configure this app to run with a role other than `all`, remember to set `all` to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
 
+    role-querier:
+      type: boolean
+      default: false
+      description: |
+        Configure the application to run as this Tempo role. Each Tempo application can only have exactly one 
+        `role-X` config set to `true`. So if you want to enable a role, remember to set all other roles to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
+
+    role-query-frontend:
+      type: boolean
+      default: false
+      description: |
+        Configure the application to run as this Tempo role. Each Tempo application can only have exactly one 
+        `role-X` config set to `true`. So if you want to enable a role, remember to set all other roles to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
+
+    role-ingester:
+      type: boolean
+      default: false
+      description: |
+        Configure the application to run as this Tempo role. Each Tempo application can only have exactly one 
+        `role-X` config set to `true`. So if you want to enable a role, remember to set all other roles to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
+
+    role-distributor:
+      type: boolean
+      default: false
+      description: |
+        Configure the application to run as this Tempo role. Each Tempo application can only have exactly one 
+        `role-X` config set to `true`. So if you want to enable a role, remember to set all other roles to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
+
+    role-compactor:
+      type: boolean
+      default: false
+      description: |
+        Configure the application to run as this Tempo role. Each Tempo application can only have exactly one 
+        `role-X` config set to `true`. So if you want to enable a role, remember to set all other roles to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
+
+    role-metrics-generator:
+      type: boolean
+      default: false
+      description: |
+        Configure the application to run as this Tempo role. Each Tempo application can only have exactly one 
+        `role-X` config set to `true`. So if you want to enable a role, remember to set all other roles to `false`.
+        Invalid configurations will result in the component to stop working and the app to set blocked status.
+        
+        Note that for a tempo deployment as a whole to be consistent, each role 
+        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        is not met, the coordinator charm will set blocked status and the deployment will shut down.
+        
 
 # build info
 
