@@ -30,8 +30,7 @@ def test_status_cannot_connect(ctx, evt):
     state_out = ctx.run(
         evt,
         state=State(
-            config={"role-ingester": True,
-                    "role-all": False},
+            config={"role-ingester": True, "role-all": False},
             containers=[container],
             relations=[Relation("tempo-cluster")],
         ),
@@ -110,7 +109,9 @@ def test_pebble_ready_plan(ctx, role):
                         },
                     )
                 ],
-            ), role),
+            ),
+            role,
+        ),
     )
 
     tempo_container_out = state_out.get_container(tempo_container)
@@ -126,13 +127,13 @@ def test_pebble_ready_plan(ctx, role):
 @pytest.mark.parametrize(
     "role_str, expected",
     (
-            ("all", "all"),
-            ("querier", "querier"),
-            ("query-frontend", "query-frontend"),
-            ("ingester", "ingester"),
-            ("distributor", "distributor"),
-            ("compactor", "compactor"),
-            ("metrics-generator", "metrics-generator"),
+        ("all", "all"),
+        ("querier", "querier"),
+        ("query-frontend", "query-frontend"),
+        ("ingester", "ingester"),
+        ("distributor", "distributor"),
+        ("compactor", "compactor"),
+        ("metrics-generator", "metrics-generator"),
     ),
 )
 def test_role(ctx, role_str, expected):
@@ -144,7 +145,8 @@ def test_role(ctx, role_str, expected):
                 containers=[Container("tempo", can_connect=True)],
                 relations=[Relation("tempo-cluster")],
             ),
-            role_str),
+            role_str,
+        ),
     )
     if expected:
         data = ClusterRequirerAppData.load(out.get_relations("tempo-cluster")[0].local_app_data)
