@@ -4,11 +4,12 @@ import json
 from unittest.mock import patch, MagicMock
 
 import pytest
+from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from scenario import Container, ExecOutput, Relation, State
-from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
 
 from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
+from tests.scenario.helpers import set_role
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -29,7 +30,8 @@ def test_status_cannot_connect(ctx, evt):
     state_out = ctx.run(
         evt,
         state=State(
-            config={"role": "ingester"},
+            config={"role-ingester": True,
+                    "role-all": False},
             containers=[container],
             relations=[Relation("tempo-cluster")],
         ),
@@ -51,9 +53,7 @@ def test_status_no_config(ctx, evt):
 
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 def test_status_bad_config(ctx):
-
     with pytest.raises(Exception):
-
         ctx.run(
             "config-changed",
             state=State(
@@ -99,18 +99,18 @@ def test_pebble_ready_plan(ctx, role):
     )
     state_out = ctx.run(
         tempo_container.pebble_ready_event,
-        state=State(
-            config={"role": role},
-            containers=[tempo_container],
-            relations=[
-                Relation(
-                    "tempo-cluster",
-                    remote_app_data={
-                        "tempo_config": json.dumps({"alive": "beef"}),
-                    },
-                )
-            ],
-        ),
+        state=set_role(
+            State(
+                containers=[tempo_container],
+                relations=[
+                    Relation(
+                        "tempo-cluster",
+                        remote_app_data={
+                            "tempo_config": json.dumps({"alive": "beef"}),
+                        },
+                    )
+                ],
+            ), role),
     )
 
     tempo_container_out = state_out.get_container(tempo_container)
@@ -126,24 +126,25 @@ def test_pebble_ready_plan(ctx, role):
 @pytest.mark.parametrize(
     "role_str, expected",
     (
-        ("all", "all"),
-        ("querier", "querier"),
-        ("query-frontend", "query-frontend"),
-        ("ingester", "ingester"),
-        ("distributor", "distributor"),
-        ("compactor", "compactor"),
-        ("metrics-generator", "metrics-generator"),
+            ("all", "all"),
+            ("querier", "querier"),
+            ("query-frontend", "query-frontend"),
+            ("ingester", "ingester"),
+            ("distributor", "distributor"),
+            ("compactor", "compactor"),
+            ("metrics-generator", "metrics-generator"),
     ),
 )
 def test_role(ctx, role_str, expected):
     out = ctx.run(
         "config-changed",
-        state=State(
-            leader=True,
-            config={"role": role_str},
-            containers=[Container("tempo", can_connect=True)],
-            relations=[Relation("tempo-cluster")],
-        ),
+        state=set_role(
+            State(
+                leader=True,
+                containers=[Container("tempo", can_connect=True)],
+                relations=[Relation("tempo-cluster")],
+            ),
+            role_str),
     )
     if expected:
         data = ClusterRequirerAppData.load(out.get_relations("tempo-cluster")[0].local_app_data)
