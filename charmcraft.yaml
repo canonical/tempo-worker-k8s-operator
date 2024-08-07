@@ -3,7 +3,7 @@
 
 type: charm
 name: tempo-worker-k8s
-title: Tempo Charmed Operator [distributed mode] worker node
+title: Tempo Charmed Operator worker node
 
 assumes:
   - k8s-api
