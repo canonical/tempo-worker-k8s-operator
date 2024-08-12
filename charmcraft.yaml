@@ -67,7 +67,7 @@ config:
         Invalid configurations will result in the component to stop working and the app to set blocked status.
         
         Note that for a tempo deployment as a whole to be consistent, each role 
-        (except the optional 'query-frontend') needs to be assigned to at least one worker node. If this condition
+        (except the optional 'metrics-generator') needs to be assigned to at least one worker node. If this condition
         is not met, the coordinator charm will set blocked status and the deployment will shut down.
 
     role-querier:
