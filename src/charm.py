@@ -17,7 +17,7 @@ from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent, WaitingStatus
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import BlockedStatus, ActiveStatus
+from ops.model import BlockedStatus
 from ops.pebble import Layer
 
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
@@ -69,8 +69,12 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.framework.observe(self.on["tempo"].pebble_check_failed, self._on_tempo_pebble_check_failed)
-        self.framework.observe(self.on["tempo"].pebble_check_recovered, self._on_tempo_pebble_check_recovered)
+        self.framework.observe(
+            self.on["tempo"].pebble_check_failed, self._on_tempo_pebble_check_failed
+        )
+        self.framework.observe(
+            self.on["tempo"].pebble_check_recovered, self._on_tempo_pebble_check_recovered
+        )
 
     @property
     def tempo_endpoint(self) -> Optional[str]:
@@ -113,26 +117,32 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                     }
                 },
                 "checks": {
-                    "ready": {"override": "replace",
-                              "http": {"url": "http://localhost:3200/ready"}}
-                }
+                    "ready": {
+                        "override": "replace",
+                        "http": {"url": "http://localhost:3200/ready"},
+                    }
+                },
             }
         )
 
     def _on_tempo_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
         if event.info.name == "ready":
-            logger.warning("Pebble `ready` check on localhost:3200/ready started to fail: worker node is down.")
+            logger.warning(
+                "Pebble `ready` check on localhost:3200/ready started to fail: worker node is down."
+            )
             # collect-status will detect that we're not ready and set waiting status.
 
     def _on_tempo_pebble_check_recovered(self, event: ops.PebbleCheckFailedEvent):
         if event.info.name == "ready":
-            logger.warning("Pebble `ready` check on localhost:3200/ready is passing: worker node is up.")
+            logger.warning(
+                "Pebble `ready` check on localhost:3200/ready is passing: worker node is up."
+            )
             # collect-status will detect that we're ready and set active status.
 
     @property
     def status(self) -> WorkerStatus:
         try:
-            with urllib.request.urlopen('http://localhost:3200/ready') as response:
+            with urllib.request.urlopen("http://localhost:3200/ready") as response:
                 html: bytes = response.read()
                 # response looks like
             # Some services are not Running:

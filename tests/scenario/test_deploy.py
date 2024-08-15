@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
+from functools import partial
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -8,8 +9,14 @@ from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRe
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from scenario import Container, ExecOutput, Relation, State
 
-from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
+from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT, _urlopen_patch
 from tests.scenario.helpers import set_role
+
+
+@pytest.fixture(autouse=True)
+def patch_all():
+    with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
+        yield
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -127,13 +134,13 @@ def test_pebble_ready_plan(ctx, role):
 @pytest.mark.parametrize(
     "role_str, expected",
     (
-        ("all", "all"),
-        ("querier", "querier"),
-        ("query-frontend", "query-frontend"),
-        ("ingester", "ingester"),
-        ("distributor", "distributor"),
-        ("compactor", "compactor"),
-        ("metrics-generator", "metrics-generator"),
+            ("all", "all"),
+            ("querier", "querier"),
+            ("query-frontend", "query-frontend"),
+            ("ingester", "ingester"),
+            ("distributor", "distributor"),
+            ("compactor", "compactor"),
+            ("metrics-generator", "metrics-generator"),
     ),
 )
 def test_role(ctx, role_str, expected):
