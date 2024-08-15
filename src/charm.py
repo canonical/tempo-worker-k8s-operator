@@ -8,21 +8,30 @@ This charm deploys a Tempo worker application on k8s Juju models.
 Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import logging
+import urllib.request
+from enum import Enum
 from typing import Optional
-from ops.model import BlockedStatus
 
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
+import ops
+from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
+from ops import CollectStatusEvent, WaitingStatus
 from ops.charm import CharmBase
 from ops.main import main
-from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
+from ops.model import BlockedStatus, ActiveStatus
 from ops.pebble import Layer
-from ops import CollectStatusEvent
 
+from charms.tempo_k8s.v1.charm_tracing import trace_charm
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
 
 CA_PATH = "/usr/local/share/ca-certificates/ca.crt"
+
+
+class WorkerStatus(Enum):
+    starting = "starting"
+    up = "up"
+    down = "down"
 
 
 class RolesConfigurationError(Exception):
@@ -37,8 +46,6 @@ class RolesConfigurationError(Exception):
 class TempoWorkerK8SOperatorCharm(CharmBase):
     """A Juju Charmed Operator for Tempo."""
 
-    _name = "tempo"
-    _instance_addr = "127.0.0.1"
     _valid_roles = [
         "all",
         "querier",
@@ -62,15 +69,8 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-
-    def _on_collect_status(self, e: CollectStatusEvent):
-        # add Tempo worker custom blocking conditions
-        if self.worker.roles and self.worker.roles[0] not in self._valid_roles:
-            e.add_status(
-                BlockedStatus(
-                    f"Invalid `role` config value: {self.config.get('role')!r}. Should be one of {self._valid_roles}"
-                )
-            )
+        self.framework.observe(self.on["tempo"].pebble_check_failed, self._on_tempo_pebble_check_failed)
+        self.framework.observe(self.on["tempo"].pebble_check_recovered, self._on_tempo_pebble_check_recovered)
 
     @property
     def tempo_endpoint(self) -> Optional[str]:
@@ -112,8 +112,57 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                         "startup": "enabled",
                     }
                 },
+                "checks": {
+                    "ready": {"override": "replace",
+                              "http": {"url": "http://localhost:3200/ready"}}
+                }
             }
         )
+
+    def _on_tempo_pebble_check_failed(self, event: ops.PebbleCheckFailedEvent):
+        if event.info.name == "ready":
+            logger.warning("Pebble `ready` check on localhost:3200/ready started to fail: worker node is down.")
+            # collect-status will detect that we're not ready and set waiting status.
+
+    def _on_tempo_pebble_check_recovered(self, event: ops.PebbleCheckFailedEvent):
+        if event.info.name == "ready":
+            logger.warning("Pebble `ready` check on localhost:3200/ready is passing: worker node is up.")
+            # collect-status will detect that we're ready and set active status.
+
+    @property
+    def status(self) -> WorkerStatus:
+        try:
+            with urllib.request.urlopen('http://localhost:3200/ready') as response:
+                html: bytes = response.read()
+                # response looks like
+            # Some services are not Running:
+            # Starting: 1
+            # Running: 16
+            raw_out = html.decode("utf-8").strip()
+            if "Starting: " in raw_out:
+                return WorkerStatus.starting
+            elif raw_out == "ready":
+                return WorkerStatus.up
+            return WorkerStatus.down
+        except Exception:
+            logger.exception("Error while getting worker status.")
+            return WorkerStatus.down
+
+    def _on_collect_status(self, e: CollectStatusEvent):
+        status = self.status
+        if status == WorkerStatus.starting:
+            e.add_status(WaitingStatus("Starting..."))
+        elif status == WorkerStatus.down:
+            e.add_status(BlockedStatus("node down (see logs)"))
+        # the happy path is handled by Worker, who'll set "(<role>) ready."
+
+        # add Tempo worker custom blocking conditions
+        if self.worker.roles and self.worker.roles[0] not in self._valid_roles:
+            e.add_status(
+                BlockedStatus(
+                    f"Invalid `role` config value: {self.config.get('role')!r}. Should be one of {self._valid_roles}"
+                )
+            )
 
 
 if __name__ == "__main__":  # pragma: nocover
