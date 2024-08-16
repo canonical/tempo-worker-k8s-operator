@@ -21,7 +21,7 @@ def test_status_check_starting(ctx):
     ClusterProviderAppData(worker_config="foo:12").dump(db)
 
     with patch(
-            "urllib.request.urlopen", new=partial(_urlopen_patch, resp="foo\nStarting: 10\n bar")
+        "urllib.request.urlopen", new=partial(_urlopen_patch, resp="foo\nStarting: 10\n bar")
     ):
         state = State(
             relations=[Relation("tempo-cluster", remote_app_data=db)],
