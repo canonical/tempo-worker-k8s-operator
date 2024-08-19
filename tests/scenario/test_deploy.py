@@ -134,13 +134,13 @@ def test_pebble_ready_plan(ctx, role):
 @pytest.mark.parametrize(
     "role_str, expected",
     (
-            ("all", "all"),
-            ("querier", "querier"),
-            ("query-frontend", "query-frontend"),
-            ("ingester", "ingester"),
-            ("distributor", "distributor"),
-            ("compactor", "compactor"),
-            ("metrics-generator", "metrics-generator"),
+        ("all", "all"),
+        ("querier", "querier"),
+        ("query-frontend", "query-frontend"),
+        ("ingester", "ingester"),
+        ("distributor", "distributor"),
+        ("compactor", "compactor"),
+        ("metrics-generator", "metrics-generator"),
     ),
 )
 def test_role(ctx, role_str, expected):

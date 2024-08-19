@@ -8,13 +8,11 @@ This charm deploys a Tempo worker application on k8s Juju models.
 Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import logging
-import urllib.request
 from enum import Enum
 from typing import Optional
 
-import ops
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
-from ops import CollectStatusEvent, WaitingStatus
+from ops import CollectStatusEvent
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import BlockedStatus
@@ -63,7 +61,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             readiness_check_endpoint="http://localhost:3200/ready"
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-
 
     @property
     def tempo_endpoint(self) -> Optional[str]:
