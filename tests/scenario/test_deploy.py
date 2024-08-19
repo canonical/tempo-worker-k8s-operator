@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from scenario import Container, ExecOutput, Relation, State
 
 from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT, _urlopen_patch
@@ -42,7 +42,7 @@ def test_status_cannot_connect(ctx, evt):
             relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == BlockedStatus('node down (see logs)')
+    assert state_out.unit_status == BlockedStatus("node down (see logs)")
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -54,7 +54,7 @@ def test_status_no_config(ctx, evt):
             relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == BlockedStatus('node down (see logs)')
+    assert state_out.unit_status == BlockedStatus("node down (see logs)")
 
 
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))

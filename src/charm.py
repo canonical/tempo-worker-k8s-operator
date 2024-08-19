@@ -8,7 +8,6 @@ This charm deploys a Tempo worker application on k8s Juju models.
 Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import logging
-from enum import Enum
 from typing import Optional
 
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
@@ -24,6 +23,7 @@ from charms.tempo_k8s.v1.charm_tracing import trace_charm
 logger = logging.getLogger(__name__)
 
 CA_PATH = "/usr/local/share/ca-certificates/ca.crt"
+
 
 class RolesConfigurationError(Exception):
     """Raised when the worker has an invalid role(s) set in its config."""
@@ -58,7 +58,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             name="tempo",
             pebble_layer=self.generate_worker_layer,
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
-            readiness_check_endpoint="http://localhost:3200/ready"
+            readiness_check_endpoint="http://localhost:3200/ready",
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
 
@@ -101,7 +101,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                         "command": f"/bin/tempo -config.file={CONFIG_FILE} -target {role}",
                         "startup": "enabled",
                     }
-                }
+                },
             }
         )
 

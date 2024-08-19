@@ -21,23 +21,21 @@ def ctx():
 @contextmanager
 def endpoint_starting():
     with patch(
-            "urllib.request.urlopen", new=partial(_urlopen_patch, resp="foo\nStarting: 10\n bar")
+        "urllib.request.urlopen", new=partial(_urlopen_patch, resp="foo\nStarting: 10\n bar")
     ):
         yield
 
 
 @contextmanager
 def endpoint_ready():
-    with patch(
-            "urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")
-    ):
+    with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
         yield
 
 
 @contextmanager
 def config_on_disk():
     with patch(
-            "cosl.coordinated_workers.worker.Worker._running_worker_config", new=lambda _: True
+        "cosl.coordinated_workers.worker.Worker._running_worker_config", new=lambda _: True
     ):
         yield
 
@@ -83,12 +81,10 @@ def test_status_check_starting(ctx, tmp_path):
     db = {}
     ClusterProviderAppData(worker_config="some: yaml").dump(db)
 
-    with (endpoint_starting(), config_on_disk()):
+    with endpoint_starting(), config_on_disk():
         state = State(
             relations=[Relation("tempo-cluster", remote_app_data=db)],
-            containers=[
-                Container("tempo", can_connect=True)
-            ],
+            containers=[Container("tempo", can_connect=True)],
         )
         # WHEN we run any event
         state_out = ctx.run("update_status", state)
@@ -103,7 +99,7 @@ def test_status_check_ready(ctx, tmp_path):
     cfg_file = tmp_path / "fake.config"
     cfg_file.write_text("some: yaml")
 
-    with (endpoint_ready(), config_on_disk()):
+    with endpoint_ready(), config_on_disk():
         state = State(
             relations=[Relation("tempo-cluster", remote_app_data=db)],
             containers=[
