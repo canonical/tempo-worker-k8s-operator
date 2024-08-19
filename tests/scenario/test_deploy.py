@@ -42,7 +42,7 @@ def test_status_cannot_connect(ctx, evt):
             relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == WaitingStatus("Waiting for `tempo` container")
+    assert state_out.unit_status == BlockedStatus('node down (see logs)')
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -54,7 +54,7 @@ def test_status_no_config(ctx, evt):
             relations=[Relation("tempo-cluster")],
         ),
     )
-    assert state_out.unit_status == WaitingStatus("Waiting for coordinator to publish a config")
+    assert state_out.unit_status == BlockedStatus('node down (see logs)')
 
 
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))

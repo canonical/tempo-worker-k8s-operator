@@ -87,7 +87,7 @@ def test_status_check_starting(ctx, tmp_path):
         state = State(
             relations=[Relation("tempo-cluster", remote_app_data=db)],
             containers=[
-                Container("tempo", can_connect=True, mounts={"cfg": Mount(CONFIG_FILE, cfg_file)})
+                Container("tempo", can_connect=True)
             ],
         )
         # WHEN we run any event
