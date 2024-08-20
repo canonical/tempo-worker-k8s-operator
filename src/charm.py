@@ -58,7 +58,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             name="tempo",
             pebble_layer=self.generate_worker_layer,
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
-            readiness_check_endpoint="http://localhost:3200/ready",
+            readiness_check_endpoint=self.readiness_check_endpoint,
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
 
@@ -72,6 +72,11 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def ca_cert_path(self) -> Optional[str]:
         """CA certificate path for tls tracing."""
         return CA_PATH
+
+    def readiness_check_endpoint(self, worker: Worker) -> str:
+        """Endpoint for worker readiness checks."""
+        scheme = "https" if worker.cluster.get_tls_data() else "http"
+        return f"{scheme}://localhost:3200/ready"
 
     def generate_worker_layer(self, worker: Worker) -> Layer:
         """Return the Pebble layer for the Worker.
