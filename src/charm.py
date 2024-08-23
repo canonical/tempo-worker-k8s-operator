@@ -73,7 +73,8 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         """CA certificate path for tls tracing."""
         return CA_PATH
 
-    def readiness_check_endpoint(self, worker: Worker) -> str:
+    @staticmethod
+    def readiness_check_endpoint(worker: Worker) -> str:
         """Endpoint for worker readiness checks."""
         scheme = "https" if worker.cluster.get_tls_data() else "http"
         return f"{scheme}://localhost:3200/ready"
