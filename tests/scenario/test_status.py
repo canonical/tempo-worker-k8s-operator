@@ -21,7 +21,8 @@ def ctx():
 @contextmanager
 def endpoint_starting(tls: bool = False):
     with patch(
-        "urllib.request.urlopen", new=partial(_urlopen_patch, tls=tls, resp="foo\nStarting: 10\n bar")
+        "urllib.request.urlopen",
+        new=partial(_urlopen_patch, tls=tls, resp="foo\nStarting: 10\n bar"),
     ):
         yield
 
@@ -92,7 +93,6 @@ def test_status_check_starting(ctx, tmp_path):
     assert state_out.unit_status == WaitingStatus("Starting...")
 
 
-
 def test_status_check_tls(ctx, tmp_path):
     # GIVEN getting the status returns "Starting: X" and we have TLS enabled
     db = {}
@@ -101,7 +101,7 @@ def test_status_check_tls(ctx, tmp_path):
         # simulate tls active
         ca_cert="cacert",
         server_cert="servercert",
-        privkey_secret_id="privkey"
+        privkey_secret_id="privkey",
     ).dump(db)
 
     with endpoint_starting(tls=True), config_on_disk():
@@ -113,7 +113,6 @@ def test_status_check_tls(ctx, tmp_path):
         state_out = ctx.run("update_status", state)
     # THEN the charm sets waiting: Starting...
     assert state_out.unit_status == WaitingStatus("Starting...")
-
 
 
 def test_status_check_ready(ctx, tmp_path):
