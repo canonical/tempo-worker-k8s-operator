@@ -9,15 +9,15 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import logging
 from typing import Optional
-from ops.model import BlockedStatus
 
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
+from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
+from ops import CollectStatusEvent
 from ops.charm import CharmBase
 from ops.main import main
-from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
+from ops.model import BlockedStatus
 from ops.pebble import Layer
-from ops import CollectStatusEvent
 
+from charms.tempo_k8s.v1.charm_tracing import trace_charm
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -37,8 +37,6 @@ class RolesConfigurationError(Exception):
 class TempoWorkerK8SOperatorCharm(CharmBase):
     """A Juju Charmed Operator for Tempo."""
 
-    _name = "tempo"
-    _instance_addr = "127.0.0.1"
     _valid_roles = [
         "all",
         "querier",
@@ -60,17 +58,9 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             name="tempo",
             pebble_layer=self.generate_worker_layer,
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
+            readiness_check_endpoint=self.readiness_check_endpoint,
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-
-    def _on_collect_status(self, e: CollectStatusEvent):
-        # add Tempo worker custom blocking conditions
-        if self.worker.roles and self.worker.roles[0] not in self._valid_roles:
-            e.add_status(
-                BlockedStatus(
-                    f"Invalid `role` config value: {self.config.get('role')!r}. Should be one of {self._valid_roles}"
-                )
-            )
 
     @property
     def tempo_endpoint(self) -> Optional[str]:
@@ -82,6 +72,12 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def ca_cert_path(self) -> Optional[str]:
         """CA certificate path for tls tracing."""
         return CA_PATH
+
+    @staticmethod
+    def readiness_check_endpoint(worker: Worker) -> str:
+        """Endpoint for worker readiness checks."""
+        scheme = "https" if worker.cluster.get_tls_data() else "http"
+        return f"{scheme}://localhost:3200/ready"
 
     def generate_worker_layer(self, worker: Worker) -> Layer:
         """Return the Pebble layer for the Worker.
@@ -114,6 +110,15 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                 },
             }
         )
+
+    def _on_collect_status(self, e: CollectStatusEvent):
+        # add Tempo worker custom blocking conditions
+        if self.worker.roles and self.worker.roles[0] not in self._valid_roles:
+            e.add_status(
+                BlockedStatus(
+                    f"Invalid `role` config value: {self.config.get('role')!r}. Should be one of {self._valid_roles}"
+                )
+            )
 
 
 if __name__ == "__main__":  # pragma: nocover
