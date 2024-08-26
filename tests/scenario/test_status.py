@@ -11,6 +11,14 @@ from scenario import Context, State, Container, Relation, Mount
 
 from charm import TempoWorkerK8SOperatorCharm
 from tests.scenario.conftest import _urlopen_patch
+import json
+from unittest.mock import MagicMock
+
+from cosl.coordinated_workers.interface import ClusterRequirer
+from scenario import ExecOutput
+
+from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
+from tests.scenario.helpers import set_role
 
 
 @pytest.fixture
@@ -133,3 +141,75 @@ def test_status_check_ready(ctx, tmp_path):
         state_out = ctx.run("update_status", state)
     # THEN the charm sets waiting: Starting...
     assert state_out.unit_status == ActiveStatus("(all roles) ready.")
+
+
+@patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
+@patch(
+    "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch.get_status",
+    MagicMock(return_value=BlockedStatus("`juju trust` this application")),
+)
+def test_patch_k8s_failed(ctx):
+
+    tempo_container = Container(
+        "tempo",
+        can_connect=True,
+        exec_mock={
+            ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
+            ("update-ca-certificates", "--fresh"): ExecOutput(),
+        },
+    )
+    state_out = ctx.run(
+        "config_changed",
+        state=set_role(
+            State(
+                containers=[tempo_container],
+                relations=[
+                    Relation(
+                        "tempo-cluster",
+                        remote_app_data={
+                            "tempo_config": json.dumps({"alive": "beef"}),
+                        },
+                    )
+                ],
+            ),
+            "all",
+        ),
+    )
+
+    assert state_out.unit_status == BlockedStatus("`juju trust` this application")
+
+
+@patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
+@patch(
+    "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch.get_status",
+    MagicMock(return_value=WaitingStatus("")),
+)
+def test_patch_k8s_waiting(ctx):
+
+    tempo_container = Container(
+        "tempo",
+        can_connect=True,
+        exec_mock={
+            ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
+            ("update-ca-certificates", "--fresh"): ExecOutput(),
+        },
+    )
+    state_out = ctx.run(
+        "config_changed",
+        state=set_role(
+            State(
+                containers=[tempo_container],
+                relations=[
+                    Relation(
+                        "tempo-cluster",
+                        remote_app_data={
+                            "tempo_config": json.dumps({"alive": "beef"}),
+                        },
+                    )
+                ],
+            ),
+            "all",
+        ),
+    )
+
+    assert state_out.unit_status == WaitingStatus("")

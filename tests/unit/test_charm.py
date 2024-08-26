@@ -12,9 +12,16 @@ from ops.testing import Harness
 
 ops.testing.SIMULATE_CAN_CONNECT = True
 
+k8s_resource_multipatch = patch.multiple(
+    "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch",
+    _namespace="test-namespace",
+    _patch=lambda _: None,
+)
+
 
 @patch("cosl.coordinated_workers.worker.Worker.running_version", lambda *_: "1.2.3")
 @patch("cosl.coordinated_workers.worker.Worker.restart", lambda *_: True)
+@k8s_resource_multipatch
 class TestCharm(unittest.TestCase):
     def setUp(self, *unused):
         self.harness = Harness(TempoWorkerK8SOperatorCharm)
