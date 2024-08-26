@@ -9,7 +9,6 @@ from ops import ActiveStatus, WaitingStatus
 from ops import BlockedStatus
 from scenario import Context, State, Container, Relation, Mount
 
-from charm import TempoWorkerK8SOperatorCharm
 from tests.scenario.conftest import _urlopen_patch
 import json
 from unittest.mock import MagicMock
@@ -22,8 +21,8 @@ from tests.scenario.helpers import set_role
 
 
 @pytest.fixture
-def ctx():
-    return Context(TempoWorkerK8SOperatorCharm)
+def ctx(worker_charm):
+    return Context(worker_charm)
 
 
 @contextmanager
@@ -143,6 +142,7 @@ def test_status_check_ready(ctx, tmp_path):
     assert state_out.unit_status == ActiveStatus("(all roles) ready.")
 
 
+@endpoint_ready
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 @patch(
     "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch.get_status",
@@ -179,6 +179,7 @@ def test_patch_k8s_failed(ctx):
     assert state_out.unit_status == BlockedStatus("`juju trust` this application")
 
 
+@endpoint_ready
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
 @patch(
     "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch.get_status",

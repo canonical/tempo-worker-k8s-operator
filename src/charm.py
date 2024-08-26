@@ -60,7 +60,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
             readiness_check_endpoint=self.readiness_check_endpoint,
             resources_requests={"cpu": "50m", "memory": "200Mi"},
-            container_name=self._name,
+            container_name="tempo",
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
 
