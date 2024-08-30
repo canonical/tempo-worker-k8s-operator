@@ -3,14 +3,16 @@
 import json
 from functools import partial
 from unittest.mock import patch, MagicMock
-
+import yaml
 import pytest
 from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
 from ops.model import ActiveStatus, BlockedStatus
-from scenario import Container, ExecOutput, Relation, State
+from scenario import Container, ExecOutput, Relation, State, Mount
 
 from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT, _urlopen_patch
 from tests.scenario.helpers import set_role
+from cosl.coordinated_workers.worker import CONFIG_FILE
+from cosl.juju_topology import JujuTopology
 
 
 @pytest.fixture(autouse=True)
@@ -112,7 +114,8 @@ def test_pebble_ready_plan(ctx, role):
                     Relation(
                         "tempo-cluster",
                         remote_app_data={
-                            "tempo_config": json.dumps({"alive": "beef"}),
+                            "worker_config": json.dumps("beef"),
+                            "remote_write_endpoints": json.dumps([{"url": "http://test:3000"}]),
                         },
                     )
                 ],
@@ -160,3 +163,50 @@ def test_role(ctx, role_str, expected):
         assert data.role == expected
     else:
         assert not out.get_relations("tempo-cluster")[0].local_app_data
+
+
+@pytest.mark.parametrize(
+    "role_str",
+    (
+        ("all"),
+        ("metrics-generator"),
+    ),
+)
+@patch.object(JujuTopology, "from_charm")
+def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
+
+    charm_topo = JujuTopology(
+        model="test",
+        model_uuid="00000000-0000-4000-8000-000000000000",
+        application="worker",
+        unit="worker/0",
+        charm_name="tempo",
+    )
+    topology_mock.return_value = charm_topo
+    cfg_file = tmp_path / "fake.config"
+    data = yaml.safe_dump({"metrics_generator": {}})
+    cfg_file.write_text("some: yaml")
+
+    cluster_relation = Relation(
+        "tempo-cluster",
+        remote_app_data={
+            "worker_config": json.dumps(data),
+            "remote_write_endpoints": json.dumps([{"url": "http://prometheus:3000/push"}]),
+        },
+    )
+
+    state = State(
+        leader=True,
+        containers=[
+            Container("tempo", can_connect=True, mounts={"cfg": Mount(CONFIG_FILE, cfg_file)})
+        ],
+        relations=[cluster_relation],
+    )
+
+    ctx.run(cluster_relation.changed_event, state=set_role(state, role_str))
+
+    # assert that topology is added to config
+    updated_config = yaml.safe_load(cfg_file.read_text())
+    assert updated_config == {
+        "metrics_generator": {"registry": {"external_labels": dict(charm_topo.as_dict())}}
+    }

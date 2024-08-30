@@ -17,7 +17,6 @@ from ops.charm import CharmBase
 from ops.main import main
 from ops.model import BlockedStatus, ActiveStatus
 from ops.pebble import Layer
-from cosl.juju_topology import JujuTopology
 
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 
@@ -45,7 +44,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
         # TODO take ports from tempo instead of using hardcoded ports set
         self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096, 14250)
-        self._topology = JujuTopology.from_charm(self)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self.worker = Worker(
             charm=self,
@@ -123,7 +121,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             if "registry" not in data["metrics_generator"]:
                 data["metrics_generator"]["registry"] = {}
             data["metrics_generator"]["registry"]["external_labels"] = dict(
-                self._topology.as_dict()
+                self.worker.cluster.juju_topology.as_dict()
             )
 
             # write new data
@@ -139,16 +137,16 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         if (
             self.worker.cluster.relation
             and self.worker.roles
-            and not self.worker.cluster.get_prometheus_endpoints()
+            and not self.worker.cluster.get_remote_write_endpoints()
         ):
             if self.worker.roles[0] == "all":
                 e.add_status(
                     ActiveStatus(
-                        "`metrics-generator` disabled. No prometheus-remote-write relation configured"
+                        "metrics-generator disabled. No prometheus remote-write relation configured"
                     )
                 )
             elif self.worker.roles[0] == "metrics-generator":
-                e.add_status(BlockedStatus("No prometheus-remote-write relation configured"))
+                e.add_status(BlockedStatus("No prometheus remote-write relation configured"))
 
 
 if __name__ == "__main__":  # pragma: nocover

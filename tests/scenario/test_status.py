@@ -125,7 +125,9 @@ def test_status_check_tls(ctx, tmp_path):
 def test_status_check_ready(ctx, tmp_path):
     # GIVEN getting the status returns "ready"
     db = {}
-    ClusterProviderAppData(worker_config="foo:12").dump(db)
+    ClusterProviderAppData(worker_config="foo:12", remote_write_endpoints=[{"url": "test"}]).dump(
+        db
+    )
     cfg_file = tmp_path / "fake.config"
     cfg_file.write_text("some: yaml")
 
@@ -214,3 +216,38 @@ def test_patch_k8s_waiting(ctx):
     )
 
     assert state_out.unit_status == WaitingStatus("")
+@pytest.mark.parametrize(
+    "role_str, expected",
+    (
+        (
+            "all",
+            ActiveStatus(
+                "metrics-generator disabled. No prometheus remote-write relation configured"
+            ),
+        ),
+        ("querier", ActiveStatus("querier ready.")),
+        ("query-frontend", ActiveStatus("query-frontend ready.")),
+        ("ingester", ActiveStatus("ingester ready.")),
+        ("distributor", ActiveStatus("distributor ready.")),
+        ("compactor", ActiveStatus("compactor ready.")),
+        ("metrics-generator", BlockedStatus("No prometheus remote-write relation configured")),
+    ),
+)
+def test_status_remote_write_endpoints(role_str, expected, ctx):
+
+    cluster_relation = Relation(
+        "tempo-cluster",
+        remote_app_data={
+            "worker_config": json.dumps("some: yaml"),
+        },
+    )
+
+    state = State(
+        leader=True,
+        containers=[Container("tempo", can_connect=True)],
+        relations=[cluster_relation],
+    )
+
+    with endpoint_ready(), config_on_disk():
+        state_out = ctx.run("collect_unit_status", set_role(state, role_str))
+        assert state_out.unit_status == expected
