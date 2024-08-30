@@ -8,7 +8,7 @@ This charm deploys a Tempo worker application on k8s Juju models.
 Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import logging
-from typing import Optional
+from typing import Optional, Dict
 
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent
@@ -59,6 +59,8 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             pebble_layer=self.generate_worker_layer,
             endpoints={"cluster": "tempo-cluster"},  # type: ignore
             readiness_check_endpoint=self.readiness_check_endpoint,
+            resources_requests=self.get_resources_requests,
+            container_name="tempo",
         )
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
 
@@ -119,6 +121,10 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                     f"Invalid `role` config value: {self.config.get('role')!r}. Should be one of {self._valid_roles}"
                 )
             )
+
+    def get_resources_requests(self, _) -> Dict[str, str]:
+        """Returns a dictionary for the "requests" portion of the resources requirements."""
+        return {"cpu": "50m", "memory": "200Mi"}
 
 
 if __name__ == "__main__":  # pragma: nocover

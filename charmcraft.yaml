@@ -141,8 +141,19 @@ config:
         Note that for a tempo deployment as a whole to be consistent, each role 
         (except the optional 'metrics-generator') needs to be assigned to at least one worker node. If this condition
         is not met, the coordinator charm will set blocked status and the deployment will shut down.
-        
-
+    cpu_limit:
+      description: |
+        K8s cpu resource limit, e.g. "1" or "500m". Default is unset (no limit). This value is used
+        for the "limits" portion of the resource requirements.
+        See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      type: string
+    memory_limit:
+      description: |
+        K8s memory resource limit, e.g. "1Gi". Default is unset (no limit). This value is used
+        for the "limits" portion of the resource requirements.
+        See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      type: string
+      
 # build info
 
 bases:
