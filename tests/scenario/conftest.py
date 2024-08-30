@@ -27,7 +27,8 @@ def worker_charm():
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
     ):
-        yield TempoWorkerK8SOperatorCharm
+        with patch("lightkube.core.client.GenericSyncClient"):
+            yield TempoWorkerK8SOperatorCharm
 
 
 @pytest.fixture

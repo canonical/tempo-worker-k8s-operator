@@ -17,11 +17,13 @@ k8s_resource_multipatch = patch.multiple(
     _namespace="test-namespace",
     _patch=lambda _: None,
 )
+lightkube_client_patch = patch("lightkube.core.client.GenericSyncClient")
 
 
 @patch("cosl.coordinated_workers.worker.Worker.running_version", lambda *_: "1.2.3")
 @patch("cosl.coordinated_workers.worker.Worker.restart", lambda *_: True)
 @k8s_resource_multipatch
+@lightkube_client_patch
 class TestCharm(unittest.TestCase):
     def setUp(self, *unused):
         self.harness = Harness(TempoWorkerK8SOperatorCharm)
