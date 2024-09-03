@@ -7,6 +7,7 @@ This charm deploys a Tempo worker application on k8s Juju models.
 
 Integrate it with a `tempo-k8s` coordinator unit to start.
 """
+import socket
 import logging
 import yaml
 from typing import Optional, Dict
@@ -70,7 +71,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def readiness_check_endpoint(worker: Worker) -> str:
         """Endpoint for worker readiness checks."""
         scheme = "https" if worker.cluster.get_tls_data() else "http"
-        return f"{scheme}://localhost:3200/ready"
+        return f"{scheme}://{socket.getfqdn()}:3200/ready"
 
     def generate_worker_layer(self, worker: Worker) -> Layer:
         """Return the Pebble layer for the Worker.
@@ -134,19 +135,26 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
     def _on_collect_status(self, e: CollectStatusEvent):
         # add Tempo worker-specific statuses
+        roles = self.worker.roles
+        if roles and len(roles) > 1:
+            e.add_status(BlockedStatus(f"cannot have more than 1 enabled role: {roles}"))
         if (
-            self.worker.cluster.relation
-            and self.worker.roles
+            roles
+            and self.worker.cluster.relation
             and not self.worker.cluster.get_remote_write_endpoints()
         ):
-            if self.worker.roles[0] == "all":
+            if "all" in roles:
                 e.add_status(
                     ActiveStatus(
-                        "metrics-generator disabled. No prometheus remote-write relation configured"
+                        "metrics-generator disabled. No prometheus remote-write relation configured on the coordinator"
                     )
                 )
-            elif self.worker.roles[0] == "metrics-generator":
-                e.add_status(BlockedStatus("No prometheus remote-write relation configured"))
+            elif "metrics-generator" in roles:
+                e.add_status(
+                    BlockedStatus(
+                        "No prometheus remote-write relation configured on the coordinator"
+                    )
+                )
 
 
 if __name__ == "__main__":  # pragma: nocover
