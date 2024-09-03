@@ -26,18 +26,19 @@ def interface_tester(interface_tester: InterfaceTester):
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
     ):
-        with patch("lightkube.core.client.GenericSyncClient"):
-            with charm_tracing_disabled():
-                interface_tester.configure(
-                    charm_type=TempoWorkerK8SOperatorCharm,
-                    state_template=State(
-                        leader=True,
-                        containers=[
-                            Container(
-                                name="tempo",
-                                can_connect=True,
-                            )
-                        ],
-                    ),
-                )
-                yield interface_tester
+        with patch("cosl.coordinated_workers.worker.status"):
+            with patch("lightkube.core.client.GenericSyncClient"):
+                with charm_tracing_disabled():
+                    interface_tester.configure(
+                        charm_type=TempoWorkerK8SOperatorCharm,
+                        state_template=State(
+                            leader=True,
+                            containers=[
+                                Container(
+                                    name="tempo",
+                                    can_connect=True,
+                                )
+                            ],
+                        ),
+                    )
+                    yield interface_tester
