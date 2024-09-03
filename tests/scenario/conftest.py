@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from unittest.mock import MagicMock
-
+import socket
 import pytest
 from scenario import Context, ExecOutput
 from ops import ActiveStatus
@@ -11,7 +11,7 @@ from charm import TempoWorkerK8SOperatorCharm
 
 @contextmanager
 def _urlopen_patch(url: str, resp, tls: bool = False):
-    if url == f"{'https' if tls else 'http'}://localhost:3200/ready":
+    if url == f"{'https' if tls else 'http'}://{socket.getfqdn()}:3200/ready":
         mm = MagicMock()
         mm.read = MagicMock(return_value=resp.encode("utf-8"))
         yield mm
