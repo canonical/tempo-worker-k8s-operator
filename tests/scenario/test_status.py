@@ -216,6 +216,8 @@ def test_patch_k8s_waiting(ctx):
     )
 
     assert state_out.unit_status == WaitingStatus("")
+
+
 @pytest.mark.parametrize(
     "role_str, expected",
     (

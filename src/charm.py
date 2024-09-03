@@ -131,7 +131,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
     def get_resources_requests(self, _) -> Dict[str, str]:
         """Returns a dictionary for the "requests" portion of the resources requirements."""
         return {"cpu": "50m", "memory": "200Mi"}
-            
 
     def _on_collect_status(self, e: CollectStatusEvent):
         # add Tempo worker-specific statuses
