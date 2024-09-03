@@ -19,17 +19,18 @@ from charm import TempoWorkerK8SOperatorCharm
 # to include the new identifier/location.
 @pytest.fixture
 def interface_tester(interface_tester: InterfaceTester):
-    with charm_tracing_disabled():
-        interface_tester.configure(
-            charm_type=TempoWorkerK8SOperatorCharm,
-            state_template=State(
-                leader=True,
-                containers=[
-                    Container(
-                        name="tempo",
-                        can_connect=True,
-                    )
-                ],
-            ),
-        )
-        yield interface_tester
+    with patch("charm.KubernetesServicePatch"):
+        with charm_tracing_disabled():
+            interface_tester.configure(
+                charm_type=TempoWorkerK8SOperatorCharm,
+                state_template=State(
+                    leader=True,
+                    containers=[
+                        Container(
+                            name="tempo",
+                            can_connect=True,
+                        )
+                    ],
+                ),
+            )
+            yield interface_tester
