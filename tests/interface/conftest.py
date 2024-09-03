@@ -26,7 +26,7 @@ def interface_tester(interface_tester: InterfaceTester):
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
     ):
-        with patch("cosl.coordinated_workers.worker.status"):
+        with patch("cosl.coordinated_workers.worker.Worker.status"):
             with patch("lightkube.core.client.GenericSyncClient"):
                 with charm_tracing_disabled():
                     interface_tester.configure(
