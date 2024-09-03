@@ -38,9 +38,6 @@ def interface_tester(interface_tester: InterfaceTester):
                                 can_connect=True,
                             )
                         ],
-                        config={
-                            "role": "all",
-                        }
                     ),
                 )
                 yield interface_tester
