@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from charms.tempo_k8s.v1.charm_tracing import charm_tracing_disabled
 from interface_tester import InterfaceTester
+from ops import ActiveStatus
 from ops.pebble import Layer
 from scenario.state import Container, State
 
@@ -19,18 +20,24 @@ from charm import TempoWorkerK8SOperatorCharm
 # to include the new identifier/location.
 @pytest.fixture
 def interface_tester(interface_tester: InterfaceTester):
-    with patch("charm.KubernetesServicePatch"):
-        with charm_tracing_disabled():
-            interface_tester.configure(
-                charm_type=TempoWorkerK8SOperatorCharm,
-                state_template=State(
-                    leader=True,
-                    containers=[
-                        Container(
-                            name="tempo",
-                            can_connect=True,
-                        )
-                    ],
-                ),
-            )
-            yield interface_tester
+    with patch.multiple(
+        "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch",
+        _namespace="test-namespace",
+        _patch=lambda _: None,
+        get_status=lambda _: ActiveStatus(""),
+    ):
+        with patch("lightkube.core.client.GenericSyncClient"):
+            with charm_tracing_disabled():
+                interface_tester.configure(
+                    charm_type=TempoWorkerK8SOperatorCharm,
+                    state_template=State(
+                        leader=True,
+                        containers=[
+                            Container(
+                                name="tempo",
+                                can_connect=True,
+                            )
+                        ],
+                    ),
+                )
+                yield interface_tester
