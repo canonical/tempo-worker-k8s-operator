@@ -1,5 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -7,14 +9,18 @@ from charms.tempo_k8s.v1.charm_tracing import charm_tracing_disabled
 from interface_tester import InterfaceTester
 from ops import ActiveStatus
 from ops.pebble import Layer
-from scenario.state import Container, State
+from scenario.state import Container, Mount, State
 from unittest.mock import MagicMock
+from cosl.coordinated_workers.worker import CONFIG_FILE
 
 from charm import TempoWorkerK8SOperatorCharm
 
 
 ready_mock = MagicMock()
 ready_mock.read.return_value = b"ready"
+
+config_mock = MagicMock()
+
 
 
 # Interface tests are centrally hosted at https://github.com/canonical/charm-relation-interfaces.
@@ -25,6 +31,11 @@ ready_mock.read.return_value = b"ready"
 # to include the new identifier/location.
 @pytest.fixture
 def interface_tester(interface_tester: InterfaceTester):
+    td = tempfile.TemporaryDirectory()
+    filename = f"config.yaml"
+    conf_file = Path(td.name).joinpath(filename)
+    conf_file.write_text("foo: bar")
+
     with patch.multiple(
         "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch",
         _namespace="test-namespace",
@@ -42,6 +53,12 @@ def interface_tester(interface_tester: InterfaceTester):
                                 Container(
                                     name="tempo",
                                     can_connect=True,
+                                    mounts={
+                                        "worker-config": Mount(
+                                            "/etc/worker/config.yaml",
+                                            conf_file
+                                        )
+                                    }
                                 )
                             ],
                         ),
