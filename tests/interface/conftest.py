@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 import tempfile
 import uuid
+from functools import partial
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,8 +19,8 @@ from cosl.coordinated_workers.worker import CONFIG_FILE
 from charm import TempoWorkerK8SOperatorCharm
 
 
-ready_mock = MagicMock()
-ready_mock.read = MagicMock(return_value="ready".encode("utf-8"))
+# ready_mock = MagicMock()
+# ready_mock.read = MagicMock(return_value="ready".encode("utf-8"))
 
 topology_mock = MagicMock()
 topology_mock.return_value = JujuTopology(
@@ -29,6 +30,14 @@ topology_mock.return_value = JujuTopology(
     unit="worker/0",
     charm_name="worker",
 )
+
+def _urlopen_patch(url: str, resp, tls: bool = False):
+    if url == f"{'https' if tls else 'http'}://localhost:3200/ready":
+        mm = MagicMock()
+        mm.read = MagicMock(return_value=resp.encode("utf-8"))
+        yield mm
+    else:
+        raise RuntimeError("unknown path")
 
 # Interface tests are centrally hosted at https://github.com/canonical/charm-relation-interfaces.
 # this fixture is used by the test runner of charm-relation-interfaces to test tempo's compliance
@@ -49,7 +58,7 @@ def interface_tester(interface_tester: InterfaceTester):
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
     ):
-        with patch("urllib.request.urlopen", ready_mock):
+        with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
             with patch("cosl.JujuTopology.from_charm", topology_mock):
                 with patch("lightkube.core.client.GenericSyncClient"):
                     with charm_tracing_disabled():
