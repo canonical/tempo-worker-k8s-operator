@@ -223,9 +223,7 @@ def test_patch_k8s_waiting(ctx):
     (
         (
             "all",
-            ActiveStatus(
-                "metrics-generator disabled. No prometheus remote-write relation configured on the coordinator"
-            ),
+            ActiveStatus("(all roles) ready."),
         ),
         ("querier", ActiveStatus("querier ready.")),
         ("query-frontend", ActiveStatus("query-frontend ready.")),

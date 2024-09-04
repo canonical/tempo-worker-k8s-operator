@@ -167,10 +167,7 @@ def test_role(ctx, role_str, expected):
 
 @pytest.mark.parametrize(
     "role_str",
-    (
-        ("all"),
-        ("metrics-generator"),
-    ),
+    (("metrics-generator"),),
 )
 @patch.object(JujuTopology, "from_charm")
 def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):

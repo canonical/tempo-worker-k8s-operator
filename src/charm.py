@@ -9,14 +9,13 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import socket
 import logging
-import yaml
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import BlockedStatus, ActiveStatus
+from ops.model import BlockedStatus
 from ops.pebble import Layer
 
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
@@ -30,6 +29,32 @@ CA_PATH = "/usr/local/share/ca-certificates/ca.crt"
 
 class RolesConfigurationError(Exception):
     """Raised when the worker has an invalid role(s) set in its config."""
+
+
+class TempoWorker(Worker):
+    """A Tempo worker class that inherits from the Worker class."""
+
+    @property
+    def _worker_config(self) -> Dict[str, Any]:
+        """Override property to add unit-specific configurations, like juju topology."""
+        config = super()._worker_config
+        if "metrics-generator" in self.roles:
+            config = self._add_juju_topolgy(config)
+
+        return config
+
+    def _add_juju_topolgy(self, config: Dict[str, Any]):
+        """Modify the worker config to add juju topology for `metrics-generator`'s generated metrics."""
+        # if `metrics_generator` doesn't exist in config,
+        # then it is not enabled, so no point of adding juju topology.
+        if "metrics_generator" in config:
+            if "registry" not in config["metrics_generator"]:
+                config["metrics_generator"]["registry"] = {}
+            config["metrics_generator"]["registry"]["external_labels"] = dict(
+                self.cluster.juju_topology.as_dict()
+            )
+
+        return config
 
 
 @trace_charm(
@@ -46,7 +71,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         # TODO take ports from tempo instead of using hardcoded ports set
         self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096, 14250)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
-        self.worker = Worker(
+        self.worker = TempoWorker(
             charm=self,
             name="tempo",
             pebble_layer=self.generate_worker_layer,
@@ -88,8 +113,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         if role == "all":
             role = "scalable-single-binary"
 
-        if role == "scalable-single-binary" or role == "metrics-generator":
-            self._add_juju_topolgy()
         return Layer(
             {
                 "summary": "tempo worker layer",
@@ -105,29 +128,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             }
         )
 
-    def _add_juju_topolgy(self):
-        """Modify the config file to add juju topology for
-        `metrics-generator` metrics before running the pebble service.
-        """
-        tempo_container = self.unit.get_container("tempo")
-        if not tempo_container.exists(CONFIG_FILE):
-            logger.debug("Skipping adding juju topology. Config file does not exist yet.")
-            return
-
-        raw_data = tempo_container.pull(CONFIG_FILE).read()
-        data = yaml.safe_load(raw_data)
-        # if `metrics_generator` doesn't exist in config,
-        # then it is not enabled, so no point of adding juju topology.
-        if "metrics_generator" in data:
-            if "registry" not in data["metrics_generator"]:
-                data["metrics_generator"]["registry"] = {}
-            data["metrics_generator"]["registry"]["external_labels"] = dict(
-                self.worker.cluster.juju_topology.as_dict()
-            )
-
-            # write new data
-            tempo_container.push(CONFIG_FILE, yaml.safe_dump(data))
-
     def get_resources_requests(self, _) -> Dict[str, str]:
         """Returns a dictionary for the "requests" portion of the resources requirements."""
         return {"cpu": "50m", "memory": "200Mi"}
@@ -138,22 +138,13 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         if roles and len(roles) > 1:
             e.add_status(BlockedStatus(f"cannot have more than 1 enabled role: {roles}"))
         if (
-            roles
+            "metrics-generator" in roles
             and self.worker.cluster.relation
             and not self.worker.cluster.get_remote_write_endpoints()
         ):
-            if "all" in roles:
-                e.add_status(
-                    ActiveStatus(
-                        "metrics-generator disabled. No prometheus remote-write relation configured on the coordinator"
-                    )
-                )
-            elif "metrics-generator" in roles:
-                e.add_status(
-                    BlockedStatus(
-                        "No prometheus remote-write relation configured on the coordinator"
-                    )
-                )
+            e.add_status(
+                BlockedStatus("No prometheus remote-write relation configured on the coordinator")
+            )
 
 
 if __name__ == "__main__":  # pragma: nocover
