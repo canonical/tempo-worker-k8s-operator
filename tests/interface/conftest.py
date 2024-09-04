@@ -19,7 +19,7 @@ from charm import TempoWorkerK8SOperatorCharm
 
 
 ready_mock = MagicMock()
-ready_mock.return_value.read.return_value = b"ready"
+ready_mock.read = MagicMock(return_value="ready".encode("utf-8"))
 
 topology_mock = MagicMock()
 topology_mock.return_value = JujuTopology(
