@@ -8,8 +8,13 @@ from interface_tester import InterfaceTester
 from ops import ActiveStatus
 from ops.pebble import Layer
 from scenario.state import Container, State
+from unittest.mock import MagicMock
 
 from charm import TempoWorkerK8SOperatorCharm
+
+
+ready_mock = MagicMock()
+ready_mock.read.return_value = b"ready"
 
 
 # Interface tests are centrally hosted at https://github.com/canonical/charm-relation-interfaces.
@@ -26,7 +31,7 @@ def interface_tester(interface_tester: InterfaceTester):
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
     ):
-        with patch("cosl.coordinated_workers.worker.Worker.status"):
+        with patch("urllib.request.urlopen", ready_mock):
             with patch("lightkube.core.client.GenericSyncClient"):
                 with charm_tracing_disabled():
                     interface_tester.configure(
