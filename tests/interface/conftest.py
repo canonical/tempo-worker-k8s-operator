@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import tempfile
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
@@ -23,7 +24,7 @@ ready_mock.read.return_value = b"ready"
 topology_mock = MagicMock()
 topology_mock.return_value = JujuTopology(
     model="testmodel",
-    model_uuid="00000000-0000-0000-0000-000000000001",
+    model_uuid=str(uuid.uuid4()),
     application="worker",
     unit="worker/0",
     charm_name="worker",
