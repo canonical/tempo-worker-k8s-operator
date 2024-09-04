@@ -15,7 +15,7 @@ from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, ActiveStatus
 from ops.pebble import Layer
 
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
@@ -38,7 +38,7 @@ class TempoWorker(Worker):
     def _worker_config(self) -> Dict[str, Any]:
         """Override property to add unit-specific configurations, like juju topology."""
         config = super()._worker_config
-        if "metrics-generator" in self.roles:
+        if "all" in self.roles or "metrics-generator" in self.roles:
             config = self._add_juju_topolgy(config)
 
         return config
@@ -138,13 +138,22 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         if roles and len(roles) > 1:
             e.add_status(BlockedStatus(f"cannot have more than 1 enabled role: {roles}"))
         if (
-            "metrics-generator" in roles
+            roles
             and self.worker.cluster.relation
             and not self.worker.cluster.get_remote_write_endpoints()
         ):
-            e.add_status(
-                BlockedStatus("No prometheus remote-write relation configured on the coordinator")
-            )
+            if "all" in roles:
+                e.add_status(
+                    ActiveStatus(
+                        "metrics-generator disabled. No prometheus remote-write relation configured on the coordinator"
+                    )
+                )
+            elif "metrics-generator" in roles:
+                e.add_status(
+                    BlockedStatus(
+                        "No prometheus remote-write relation configured on the coordinator"
+                    )
+                )
 
 
 if __name__ == "__main__":  # pragma: nocover
