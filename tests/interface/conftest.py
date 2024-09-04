@@ -19,7 +19,7 @@ from charm import TempoWorkerK8SOperatorCharm
 
 
 ready_mock = MagicMock()
-ready_mock.read.return_value = b"ready"
+ready_mock.return_value.read.return_value = b"ready"
 
 topology_mock = MagicMock()
 topology_mock.return_value = JujuTopology(
