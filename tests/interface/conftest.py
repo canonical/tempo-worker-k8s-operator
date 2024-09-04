@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pytest
 from charms.tempo_k8s.v1.charm_tracing import charm_tracing_disabled
+from cosl import JujuTopology
 from interface_tester import InterfaceTester
 from ops import ActiveStatus
 from ops.pebble import Layer
@@ -19,9 +20,14 @@ from charm import TempoWorkerK8SOperatorCharm
 ready_mock = MagicMock()
 ready_mock.read.return_value = b"ready"
 
-config_mock = MagicMock()
-
-
+topology_mock = MagicMock()
+topology_mock.return_value = JujuTopology(
+    model="testmodel",
+    model_uuid="test-uuid",
+    application="worker",
+    unit="worker/0",
+    charm_name="worker",
+)
 
 # Interface tests are centrally hosted at https://github.com/canonical/charm-relation-interfaces.
 # this fixture is used by the test runner of charm-relation-interfaces to test tempo's compliance
@@ -43,24 +49,25 @@ def interface_tester(interface_tester: InterfaceTester):
         get_status=lambda _: ActiveStatus(""),
     ):
         with patch("urllib.request.urlopen", ready_mock):
-            with patch("lightkube.core.client.GenericSyncClient"):
-                with charm_tracing_disabled():
-                    interface_tester.configure(
-                        charm_type=TempoWorkerK8SOperatorCharm,
-                        state_template=State(
-                            leader=True,
-                            containers=[
-                                Container(
-                                    name="tempo",
-                                    can_connect=True,
-                                    mounts={
-                                        "worker-config": Mount(
-                                            "/etc/worker/config.yaml",
-                                            conf_file
-                                        )
-                                    }
-                                )
-                            ],
-                        ),
-                    )
-                    yield interface_tester
+            with patch("cosl.JujuTopology.from_charm", topology_mock):
+                with patch("lightkube.core.client.GenericSyncClient"):
+                    with charm_tracing_disabled():
+                        interface_tester.configure(
+                            charm_type=TempoWorkerK8SOperatorCharm,
+                            state_template=State(
+                                leader=True,
+                                containers=[
+                                    Container(
+                                        name="tempo",
+                                        can_connect=True,
+                                        mounts={
+                                            "worker-config": Mount(
+                                                CONFIG_FILE,
+                                                conf_file
+                                            )
+                                        }
+                                    )
+                                ],
+                            ),
+                        )
+                        yield interface_tester
