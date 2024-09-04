@@ -63,23 +63,24 @@ def interface_tester(interface_tester: InterfaceTester):
         with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
             with patch("cosl.JujuTopology.from_charm", topology_mock):
                 with patch("lightkube.core.client.GenericSyncClient"):
-                    with charm_tracing_disabled():
-                        interface_tester.configure(
-                            charm_type=TempoWorkerK8SOperatorCharm,
-                            state_template=State(
-                                leader=True,
-                                containers=[
-                                    Container(
-                                        name="tempo",
-                                        can_connect=True,
-                                        mounts={
-                                            "worker-config": Mount(
-                                                CONFIG_FILE,
-                                                conf_file
-                                            )
-                                        }
-                                    )
-                                ],
-                            ),
-                        )
-                        yield interface_tester
+                    with patch("socket.getfqdn", "1.2.3.4"):
+                        with charm_tracing_disabled():
+                            interface_tester.configure(
+                                charm_type=TempoWorkerK8SOperatorCharm,
+                                state_template=State(
+                                    leader=True,
+                                    containers=[
+                                        Container(
+                                            name="tempo",
+                                            can_connect=True,
+                                            mounts={
+                                                "worker-config": Mount(
+                                                    CONFIG_FILE,
+                                                    conf_file
+                                                )
+                                            }
+                                        )
+                                    ],
+                                ),
+                            )
+                            yield interface_tester
