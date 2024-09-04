@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 import tempfile
 import uuid
+from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
 from unittest.mock import patch
@@ -31,6 +32,7 @@ topology_mock.return_value = JujuTopology(
     charm_name="worker",
 )
 
+@contextmanager
 def _urlopen_patch(url: str, resp, tls: bool = False):
     if url == f"{'https' if tls else 'http'}://localhost:3200/ready":
         mm = MagicMock()
