@@ -198,7 +198,14 @@ def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
     state = State(
         leader=True,
         containers=[
-            Container("tempo", can_connect=True, mounts={"cfg": Mount(CONFIG_FILE, cfg_file)})
+            Container(
+                "tempo",
+                can_connect=True,
+                mounts={"cfg": Mount(CONFIG_FILE, cfg_file)},
+                exec_mock={
+                    ("update-ca-certificates", "--fresh"): ExecOutput(),
+                },
+            )
         ],
         relations=[cluster_relation],
     )
