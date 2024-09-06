@@ -1,7 +1,9 @@
 from contextlib import contextmanager
+from pathlib import PosixPath
 from unittest.mock import MagicMock
 import socket
 import pytest
+from cosl.coordinated_workers.worker import ROOT_CA_CERT
 from scenario import Context, ExecOutput
 from ops import ActiveStatus
 from unittest.mock import patch
@@ -19,8 +21,13 @@ def _urlopen_patch(url: str, resp, tls: bool = False):
         raise RuntimeError("unknown path")
 
 
-@pytest.fixture
-def worker_charm():
+class NonWriteablePath(PosixPath):
+    def write_text(self, data, encoding=None, errors=None, newline=None):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def patch_all():
     with patch.multiple(
         "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch",
         _namespace="test-namespace",
@@ -28,12 +35,17 @@ def worker_charm():
         get_status=lambda _: ActiveStatus(""),
     ):
         with patch("lightkube.core.client.GenericSyncClient"):
-            yield TempoWorkerK8SOperatorCharm
+            with patch("subprocess.run"):
+                with patch(
+                    "cosl.coordinated_workers.worker.ROOT_CA_CERT",
+                    new=NonWriteablePath(ROOT_CA_CERT),
+                ):
+                    yield
 
 
 @pytest.fixture
-def ctx(worker_charm):
-    return Context(charm_type=worker_charm)
+def ctx():
+    return Context(charm_type=TempoWorkerK8SOperatorCharm)
 
 
 TEMPO_VERSION_EXEC_OUTPUT = ExecOutput(stdout="1.31")
