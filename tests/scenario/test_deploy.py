@@ -16,9 +16,14 @@ from cosl.juju_topology import JujuTopology
 
 
 @pytest.fixture(autouse=True)
-def patch_all():
+def patch_urllib_request():
     with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
         yield
+
+
+tempo_container = Container(
+    "tempo", can_connect=True, exec_mock={("update-ca-certificates", "--fresh"): ExecOutput()}
+)
 
 
 @pytest.mark.parametrize("evt", ["update-status", "config-changed"])
@@ -52,7 +57,7 @@ def test_status_no_config(ctx, evt):
     state_out = ctx.run(
         evt,
         state=State(
-            containers=[Container("tempo", can_connect=True)],
+            containers=[tempo_container],
             relations=[Relation("tempo-cluster")],
         ),
     )
@@ -66,7 +71,7 @@ def test_status_bad_config(ctx):
             "config-changed",
             state=State(
                 config={"role": "beeef"},
-                containers=[Container("tempo", can_connect=True)],
+                containers=[tempo_container],
                 relations=[Relation("tempo-cluster")],
             ),
         )
@@ -152,7 +157,7 @@ def test_role(ctx, role_str, expected):
         state=set_role(
             State(
                 leader=True,
-                containers=[Container("tempo", can_connect=True)],
+                containers=[tempo_container],
                 relations=[Relation("tempo-cluster")],
             ),
             role_str,

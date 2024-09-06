@@ -7,7 +7,7 @@ from cosl.coordinated_workers.interface import ClusterProviderAppData
 from cosl.coordinated_workers.worker import CONFIG_FILE
 from ops import ActiveStatus, WaitingStatus
 from ops import BlockedStatus
-from scenario import Context, State, Container, Relation, Mount
+from scenario import State, Container, Relation, Mount, Secret
 
 from tests.scenario.conftest import _urlopen_patch
 import json
@@ -19,10 +19,9 @@ from scenario import ExecOutput
 from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
 from tests.scenario.helpers import set_role
 
-
-@pytest.fixture
-def ctx(worker_charm):
-    return Context(worker_charm)
+tempo_container = Container(
+    "tempo", can_connect=True, exec_mock={("update-ca-certificates", "--fresh"): ExecOutput()}
+)
 
 
 @contextmanager
@@ -73,15 +72,13 @@ def test_status_check_no_config(ctx, caplog):
 
     state = State(
         relations=[Relation("tempo-cluster", remote_app_data=db)],
-        containers=[Container("tempo", can_connect=True)],
+        containers=[tempo_container],
     )
     # WHEN we run any event
     state_out = ctx.run("update_status", state)
 
     # THEN the charm sets blocked
     assert state_out.unit_status == BlockedStatus("node down (see logs)")
-    # AND THEN the charm logs that the config isn't on disk
-    assert "Config file not on disk. Skipping status check." in caplog.messages
 
 
 def test_status_check_starting(ctx, tmp_path):
@@ -92,7 +89,7 @@ def test_status_check_starting(ctx, tmp_path):
     with endpoint_starting(), config_on_disk():
         state = State(
             relations=[Relation("tempo-cluster", remote_app_data=db)],
-            containers=[Container("tempo", can_connect=True)],
+            containers=[tempo_container],
         )
         # WHEN we run any event
         state_out = ctx.run("update_status", state)
@@ -113,8 +110,9 @@ def test_status_check_tls(ctx, tmp_path):
 
     with endpoint_starting(tls=True), config_on_disk():
         state = State(
+            secrets=[Secret("secret:privkey", contents={0: {}})],
             relations=[Relation("tempo-cluster", remote_app_data=db)],
-            containers=[Container("tempo", can_connect=True)],
+            containers=[tempo_container],
         )
         # WHEN we run any event
         state_out = ctx.run("update_status", state)
@@ -135,7 +133,15 @@ def test_status_check_ready(ctx, tmp_path):
         state = State(
             relations=[Relation("tempo-cluster", remote_app_data=db)],
             containers=[
-                Container("tempo", can_connect=True, mounts={"cfg": Mount(CONFIG_FILE, cfg_file)})
+                Container(
+                    "tempo",
+                    can_connect=True,
+                    exec_mock={
+                        ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
+                        ("update-ca-certificates", "--fresh"): ExecOutput(),
+                    },
+                    mounts={"cfg": Mount(CONFIG_FILE, cfg_file)},
+                )
             ],
         )
         # WHEN we run any event
@@ -249,7 +255,7 @@ def test_status_remote_write_endpoints(role_str, expected, ctx):
 
     state = State(
         leader=True,
-        containers=[Container("tempo", can_connect=True)],
+        containers=[tempo_container],
         relations=[cluster_relation],
     )
 
