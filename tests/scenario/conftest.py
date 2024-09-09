@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import socket
 import pytest
 from cosl.coordinated_workers.worker import ROOT_CA_CERT
-from scenario import Context, ExecOutput
+from scenario import Context, Exec
 from ops import ActiveStatus
 from unittest.mock import patch
 
@@ -48,4 +48,5 @@ def ctx():
     return Context(charm_type=TempoWorkerK8SOperatorCharm)
 
 
-TEMPO_VERSION_EXEC_OUTPUT = ExecOutput(stdout="1.31")
+TEMPO_VERSION_EXEC_OUTPUT = Exec(command_prefix=("/bin/tempo", "-version"), stdout="1.31")
+UPDATE_CA_CERTS_EXEC_OUTPUT = Exec(command_prefix=("update-ca-certificates", "--fresh"))

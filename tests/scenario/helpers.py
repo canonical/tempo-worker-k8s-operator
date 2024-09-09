@@ -1,4 +1,5 @@
 import scenario
+from dataclasses import replace
 
 _valid_roles = [
     "all",
@@ -17,4 +18,4 @@ def set_role(state: scenario.State, role: str):
     for role_ in _valid_roles:
         cfg[f"role-{role_}"] = False
     cfg[f"role-{role}"] = True
-    return state.replace(config=cfg)
+    return replace(state, config=cfg)
