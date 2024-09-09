@@ -14,19 +14,19 @@ jobs:
   test-against-coordinator:
     runs-on: ubuntu-latest
     steps:
-      - name: Clone the canonical/tempo-worker-k8s-operator repository to ./
-        uses: GuillaumeFalourd/clone-github-repo-action@v2.3
+      - name: Checkout the canonical/tempo-worker-k8s-operator repository
+        uses: actions/checkout@v4
         with:
-          depth: 1
-          branch: main
-          owner: canonical
-          repository: tempo-worker-k8s-operator
+          fetch-depth: 1
+          path: "worker"
+          # leave other args blank: it's checking out THIS branch/THIS repo
 
       - name: Checkout the canonical/tempo-coordinator-k8s-operator repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           repository: canonical/tempo-coordinator-k8s-operator
+          path: "coordinator"
           ref: main
 
       - name: Set up python
@@ -60,6 +60,6 @@ jobs:
           charmcraft-channel: "2.x/stable"
 
       - name: Run the coordinator charm's integration tests
-        run: tox -vve integration
+        run: cd coordinator; tox -vve integration
         env:
-          TEMPO_WORKER_CHARM_PATH: ./tempo-worker-k8s-operator
+          TEMPO_WORKER_CHARM_PATH: ../worker
