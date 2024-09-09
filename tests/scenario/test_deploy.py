@@ -7,9 +7,13 @@ import yaml
 import pytest
 from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
 from ops.model import ActiveStatus, BlockedStatus
-from scenario import Container, ExecOutput, Relation, State, Mount
+from scenario import Container, Relation, State, Mount
 
-from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT, _urlopen_patch
+from tests.scenario.conftest import (
+    TEMPO_VERSION_EXEC_OUTPUT,
+    _urlopen_patch,
+    UPDATE_CA_CERTS_EXEC_OUTPUT,
+)
 from tests.scenario.helpers import set_role
 from cosl.coordinated_workers.worker import CONFIG_FILE
 from cosl.juju_topology import JujuTopology
@@ -21,28 +25,28 @@ def patch_urllib_request():
         yield
 
 
-tempo_container = Container(
-    "tempo", can_connect=True, exec_mock={("update-ca-certificates", "--fresh"): ExecOutput()}
-)
+tempo_container = Container("tempo", can_connect=True, execs={UPDATE_CA_CERTS_EXEC_OUTPUT})
 
 
-@pytest.mark.parametrize("evt", ["update-status", "config-changed"])
+@pytest.mark.parametrize("evt", ["update_status", "config_changed"])
 def test_status_cannot_connect_no_relation(ctx, evt):
-    state_out = ctx.run(evt, state=State(containers=[Container("tempo", can_connect=False)]))
+    state_out = ctx.run(
+        getattr(ctx.on, evt)(), state=State(containers=[Container("tempo", can_connect=False)])
+    )
     assert state_out.unit_status == BlockedStatus("Missing relation to a coordinator charm")
 
 
-@pytest.mark.parametrize("evt", ["update-status", "config-changed"])
+@pytest.mark.parametrize("evt", ["update_status", "config_changed"])
 def test_status_cannot_connect(ctx, evt):
     container = Container(
         "tempo",
         can_connect=False,
-        exec_mock={
-            ("update-ca-certificates", "--fresh"): ExecOutput(),
+        execs={
+            UPDATE_CA_CERTS_EXEC_OUTPUT,
         },
     )
     state_out = ctx.run(
-        evt,
+        getattr(ctx.on, evt)(),
         state=State(
             config={"role-ingester": True, "role-all": False},
             containers=[container],
@@ -52,10 +56,10 @@ def test_status_cannot_connect(ctx, evt):
     assert state_out.unit_status == BlockedStatus("node down (see logs)")
 
 
-@pytest.mark.parametrize("evt", ["update-status", "config-changed"])
+@pytest.mark.parametrize("evt", ["update_status", "config_changed"])
 def test_status_no_config(ctx, evt):
     state_out = ctx.run(
-        evt,
+        getattr(ctx.on, evt)(),
         state=State(
             containers=[tempo_container],
             relations=[Relation("tempo-cluster")],
@@ -68,7 +72,7 @@ def test_status_no_config(ctx, evt):
 def test_status_bad_config(ctx):
     with pytest.raises(Exception):
         ctx.run(
-            "config-changed",
+            ctx.on.config_changed(),
             state=State(
                 config={"role": "beeef"},
                 containers=[tempo_container],
@@ -105,13 +109,13 @@ def test_pebble_ready_plan(ctx, role):
     tempo_container = Container(
         "tempo",
         can_connect=True,
-        exec_mock={
-            ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
-            ("update-ca-certificates", "--fresh"): ExecOutput(),
+        execs={
+            TEMPO_VERSION_EXEC_OUTPUT,
+            UPDATE_CA_CERTS_EXEC_OUTPUT,
         },
     )
     state_out = ctx.run(
-        tempo_container.pebble_ready_event,
+        ctx.on.pebble_ready(tempo_container),
         state=set_role(
             State(
                 containers=[tempo_container],
@@ -129,7 +133,7 @@ def test_pebble_ready_plan(ctx, role):
         ),
     )
 
-    tempo_container_out = state_out.get_container(tempo_container)
+    tempo_container_out = state_out.get_container(tempo_container.name)
     assert tempo_container_out.services.get("tempo").is_running() is True
     assert tempo_container_out.plan.to_dict() == expected_plan
 
@@ -153,7 +157,7 @@ def test_pebble_ready_plan(ctx, role):
 )
 def test_role(ctx, role_str, expected):
     out = ctx.run(
-        "config-changed",
+        ctx.on.config_changed(),
         state=set_role(
             State(
                 leader=True,
@@ -206,16 +210,16 @@ def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
             Container(
                 "tempo",
                 can_connect=True,
-                mounts={"cfg": Mount(CONFIG_FILE, cfg_file)},
-                exec_mock={
-                    ("update-ca-certificates", "--fresh"): ExecOutput(),
+                mounts={"cfg": Mount(location=CONFIG_FILE, source=cfg_file)},
+                execs={
+                    UPDATE_CA_CERTS_EXEC_OUTPUT,
                 },
             )
         ],
         relations=[cluster_relation],
     )
 
-    ctx.run(cluster_relation.changed_event, state=set_role(state, role_str))
+    ctx.run(ctx.on.relation_changed(cluster_relation), state=set_role(state, role_str))
 
     # assert that topology is added to config
     updated_config = yaml.safe_load(cfg_file.read_text())
