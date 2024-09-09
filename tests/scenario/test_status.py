@@ -14,14 +14,11 @@ import json
 from unittest.mock import MagicMock
 
 from cosl.coordinated_workers.interface import ClusterRequirer
-from scenario import ExecOutput
 
-from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT
+from tests.scenario.conftest import TEMPO_VERSION_EXEC_OUTPUT, UPDATE_CA_CERTS_EXEC_OUTPUT
 from tests.scenario.helpers import set_role
 
-tempo_container = Container(
-    "tempo", can_connect=True, exec_mock={("update-ca-certificates", "--fresh"): ExecOutput()}
-)
+tempo_container = Container("tempo", can_connect=True, execs={UPDATE_CA_CERTS_EXEC_OUTPUT})
 
 
 @contextmanager
@@ -57,7 +54,7 @@ def test_status_check_no_pebble(ctx, caplog):
         containers=[Container("tempo")],
     )
     # WHEN we run any event
-    state_out = ctx.run("update_status", state)
+    state_out = ctx.run(ctx.on.update_status(), state)
 
     # THEN the charm sets blocked
     assert state_out.unit_status == BlockedStatus("node down (see logs)")
@@ -75,7 +72,7 @@ def test_status_check_no_config(ctx, caplog):
         containers=[tempo_container],
     )
     # WHEN we run any event
-    state_out = ctx.run("update_status", state)
+    state_out = ctx.run(ctx.on.update_status(), state)
 
     # THEN the charm sets blocked
     assert state_out.unit_status == BlockedStatus("node down (see logs)")
@@ -92,7 +89,7 @@ def test_status_check_starting(ctx, tmp_path):
             containers=[tempo_container],
         )
         # WHEN we run any event
-        state_out = ctx.run("update_status", state)
+        state_out = ctx.run(ctx.on.update_status(), state)
     # THEN the charm sets waiting: Starting...
     assert state_out.unit_status == WaitingStatus("Starting...")
 
@@ -110,12 +107,12 @@ def test_status_check_tls(ctx, tmp_path):
 
     with endpoint_starting(tls=True), config_on_disk():
         state = State(
-            secrets=[Secret("secret:privkey", contents={0: {}})],
+            secrets=[Secret(id="secret:privkey", tracked_content={})],
             relations=[Relation("tempo-cluster", remote_app_data=db)],
             containers=[tempo_container],
         )
         # WHEN we run any event
-        state_out = ctx.run("update_status", state)
+        state_out = ctx.run(ctx.on.update_status(), state)
     # THEN the charm sets waiting: Starting...
     assert state_out.unit_status == WaitingStatus("Starting...")
 
@@ -136,16 +133,16 @@ def test_status_check_ready(ctx, tmp_path):
                 Container(
                     "tempo",
                     can_connect=True,
-                    exec_mock={
-                        ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
-                        ("update-ca-certificates", "--fresh"): ExecOutput(),
+                    execs={
+                        TEMPO_VERSION_EXEC_OUTPUT,
+                        UPDATE_CA_CERTS_EXEC_OUTPUT,
                     },
-                    mounts={"cfg": Mount(CONFIG_FILE, cfg_file)},
+                    mounts={"cfg": Mount(location=CONFIG_FILE, source=cfg_file)},
                 )
             ],
         )
         # WHEN we run any event
-        state_out = ctx.run("update_status", state)
+        state_out = ctx.run(ctx.on.update_status(), state)
     # THEN the charm sets waiting: Starting...
     assert state_out.unit_status == ActiveStatus("(all roles) ready.")
 
@@ -162,8 +159,8 @@ def test_patch_k8s_failed(ctx):
         "tempo",
         can_connect=True,
         exec_mock={
-            ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
-            ("update-ca-certificates", "--fresh"): ExecOutput(),
+            TEMPO_VERSION_EXEC_OUTPUT,
+            UPDATE_CA_CERTS_EXEC_OUTPUT,
         },
     )
     state_out = ctx.run(
@@ -199,8 +196,8 @@ def test_patch_k8s_waiting(ctx):
         "tempo",
         can_connect=True,
         exec_mock={
-            ("/bin/tempo", "-version"): TEMPO_VERSION_EXEC_OUTPUT,
-            ("update-ca-certificates", "--fresh"): ExecOutput(),
+            TEMPO_VERSION_EXEC_OUTPUT,
+            UPDATE_CA_CERTS_EXEC_OUTPUT,
         },
     )
     state_out = ctx.run(
@@ -260,5 +257,5 @@ def test_status_remote_write_endpoints(role_str, expected, ctx):
     )
 
     with endpoint_ready(), config_on_disk():
-        state_out = ctx.run("collect_unit_status", set_role(state, role_str))
+        state_out = ctx.run(ctx.on.collect_unit_status(), set_role(state, role_str))
         assert state_out.unit_status == expected
