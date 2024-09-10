@@ -33,6 +33,7 @@ def patch_all():
         _namespace="test-namespace",
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
+        is_ready=lambda _: True,
     ):
         with patch("lightkube.core.client.GenericSyncClient"):
             with patch("subprocess.run"):
