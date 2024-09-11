@@ -1,6 +1,9 @@
 # Testing tools configuration
+
 [tool.coverage.run]
 branch = true
+parallel = true
+omit = ["tests/**", "lib/**"]
 
 [tool.coverage.report]
 show_missing = true
@@ -9,6 +12,10 @@ show_missing = true
 minversion = "6.0"
 log_cli_level = "INFO"
 asyncio_mode = "auto"
+testpaths = [
+    "tests/unit",
+    "tests/scenario"
+]
 
 # Formatting tools configuration
 [tool.black]
