@@ -1,5 +1,5 @@
 ops>=2.15
-cosl>=0.0.31
+cosl>=0.0.32
 
 # Charm relation interfaces
 pydantic>=2
