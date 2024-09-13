@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import yaml
 import pytest
 from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus
 from scenario import Container, Relation, State, Mount
 
 from tests.scenario.conftest import (
