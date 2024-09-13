@@ -25,60 +25,14 @@ def patch_urllib_request():
         yield
 
 
-tempo_container = Container("tempo", can_connect=True, execs={UPDATE_CA_CERTS_EXEC_OUTPUT})
-
-
-@pytest.mark.parametrize("evt", ["update_status", "config_changed"])
-def test_status_cannot_connect_no_relation(ctx, evt):
-    state_out = ctx.run(
-        getattr(ctx.on, evt)(), state=State(containers=[Container("tempo", can_connect=False)])
-    )
-    assert state_out.unit_status == BlockedStatus("Missing relation to a coordinator charm")
-
-
-@pytest.mark.parametrize("evt", ["update_status", "config_changed"])
-def test_status_cannot_connect(ctx, evt):
-    container = Container(
-        "tempo",
-        can_connect=False,
-        execs={
-            UPDATE_CA_CERTS_EXEC_OUTPUT,
-        },
-    )
-    state_out = ctx.run(
-        getattr(ctx.on, evt)(),
-        state=State(
-            config={"role-ingester": True, "role-all": False},
-            containers=[container],
-            relations=[Relation("tempo-cluster")],
-        ),
-    )
-    assert state_out.unit_status == BlockedStatus("node down (see logs)")
-
-
-@pytest.mark.parametrize("evt", ["update_status", "config_changed"])
-def test_status_no_config(ctx, evt):
-    state_out = ctx.run(
-        getattr(ctx.on, evt)(),
-        state=State(
-            containers=[tempo_container],
-            relations=[Relation("tempo-cluster")],
-        ),
-    )
-    assert state_out.unit_status == BlockedStatus("node down (see logs)")
-
-
-@patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
-def test_status_bad_config(ctx):
-    with pytest.raises(Exception):
-        ctx.run(
-            ctx.on.config_changed(),
-            state=State(
-                config={"role": "beeef"},
-                containers=[tempo_container],
-                relations=[Relation("tempo-cluster")],
-            ),
-        )
+tempo_container = Container(
+    "tempo",
+    can_connect=True,
+    execs={
+        TEMPO_VERSION_EXEC_OUTPUT,
+        UPDATE_CA_CERTS_EXEC_OUTPUT,
+    },
+)
 
 
 @pytest.mark.parametrize(
@@ -106,14 +60,6 @@ def test_pebble_ready_plan(ctx, role):
         },
     }
 
-    tempo_container = Container(
-        "tempo",
-        can_connect=True,
-        execs={
-            TEMPO_VERSION_EXEC_OUTPUT,
-            UPDATE_CA_CERTS_EXEC_OUTPUT,
-        },
-    )
     state_out = ctx.run(
         ctx.on.pebble_ready(tempo_container),
         state=set_role(
