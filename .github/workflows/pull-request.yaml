@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set CWD ${{ runner.home }}
-      - run: cd ${{ runner.home }}
+        run: cd ${{ runner.home }}
 
       - name: Checkout the canonical/tempo-worker-k8s-operator repository (this branch)
         uses: actions/checkout@v4
