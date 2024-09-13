@@ -59,8 +59,11 @@ jobs:
           provider: microk8s
           channel: 1.26-strict/stable
           microk8s-group: snap_microk8s
-          microk8s-addons: "hostpath-storage dns rbac metallb:${{ steps.ip_range.outputs.ip_range }}"
+          microk8s-addons: "hostpath-storage dns metallb:${{ steps.ip_range.outputs.ip_range }}"
           charmcraft-channel: "2.x/stable"
+
+      - name: Enable rbac
+        run: sudo microk8s enable rbac
 
       - name: Build the worker charm
         run: charmcraft pack -p ${{ runner.home }}/worker
