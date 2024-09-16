@@ -108,8 +108,6 @@ def test_status_too_many_roles_enabled(roles_enabled, ctx):
         relations=[cluster_relation],
     )
 
-    # TODO: when https://github.com/canonical/cos-lib/pull/77 merges,
-    # we can replace this with:
     with endpoint_ready(), config_on_disk():
         state_out = ctx.run(ctx.on.collect_unit_status(), state)
         assert state_out.unit_status == BlockedStatus(
