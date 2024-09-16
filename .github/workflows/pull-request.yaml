@@ -14,20 +14,15 @@ jobs:
   test-against-coordinator:
     runs-on: ubuntu-latest
     steps:
-      - name: Set CWD ${{ runner.home }}
-        run: cd ${{ runner.home }}
-
       - name: Checkout the canonical/tempo-worker-k8s-operator repository (this branch)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
           path: "worker"
           # leave other args blank: it's checking out THIS branch/THIS repo
 
       - name: Checkout the canonical/tempo-coordinator-k8s-operator repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
           repository: canonical/tempo-coordinator-k8s-operator
           path: "coordinator"
           ref: main
@@ -66,9 +61,9 @@ jobs:
         run: sudo microk8s enable rbac
 
       - name: Build the worker charm
-        run: charmcraft pack -p ${{ runner.home }}/worker
+        run: charmcraft pack -p $GITHUB_WORKSPACE/worker
 
       - name: Run the coordinator charm's integration tests
         run: cd coordinator; tox -vve integration
         env:
-          TEMPO_WORKER_CHARM: ${{ runner.home }}/tempo-worker-k8s_ubuntu-22.04-amd64.charm
+          TEMPO_WORKER_CHARM: $GITHUB_WORKSPACE/tempo-worker-k8s_ubuntu-22.04-amd64.charm
