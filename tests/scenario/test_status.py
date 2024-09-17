@@ -6,7 +6,6 @@ import pytest
 from ops import ActiveStatus
 from ops import BlockedStatus
 from scenario import State, Container, Relation
-from scenario.errors import UncaughtCharmError
 
 from tests.scenario.conftest import _urlopen_patch
 import json
@@ -109,12 +108,8 @@ def test_status_too_many_roles_enabled(roles_enabled, ctx):
         relations=[cluster_relation],
     )
 
-    # TODO: when https://github.com/canonical/cos-lib/pull/77 merges,
-    # we can replace this with:
-    # with endpoint_ready(), config_on_disk():
-    #     state_out = ctx.run(ctx.on.collect_unit_status(), state)
-    #     assert state_out.unit_status == BlockedStatus(f"cannot have more than 1 enabled role: {roles_enabled}")
-
-    with pytest.raises(UncaughtCharmError):
-        with endpoint_ready(), config_on_disk():
-            ctx.run(ctx.on.collect_unit_status(), state)
+    with endpoint_ready(), config_on_disk():
+        state_out = ctx.run(ctx.on.collect_unit_status(), state)
+        assert state_out.unit_status == BlockedStatus(
+            f"cannot have more than 1 enabled role: {list(roles_enabled) + (['all'] if 'all' not in roles_enabled else [])}"
+        )
