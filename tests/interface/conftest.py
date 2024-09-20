@@ -59,7 +59,7 @@ def interface_tester(interface_tester: InterfaceTester):
                                         name="tempo",
                                         can_connect=True,
                                         mounts={"worker-config": Mount(location=CONFIG_FILE, source=conf_file)},
-                                        exec_mock={
+                                        execs={
                                             Exec(("update-ca-certificates", "--fresh")),
                                         },
                                     )
