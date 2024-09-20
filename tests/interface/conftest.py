@@ -16,6 +16,7 @@ from cosl.coordinated_workers.worker import CONFIG_FILE
 
 from charm import TempoWorkerK8SOperatorCharm
 
+k8s_resource_patch_ready = MagicMock(return_value=True)
 
 @contextmanager
 def _urlopen_patch(url: str, resp, tls: bool = False):
@@ -45,6 +46,7 @@ def interface_tester(interface_tester: InterfaceTester):
         _namespace="test-namespace",
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
+        is_ready=k8s_resource_patch_ready,
     ):
         with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
             with patch("lightkube.core.client.GenericSyncClient"):
