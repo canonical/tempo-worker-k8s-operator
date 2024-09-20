@@ -12,11 +12,12 @@ from interface_tester import InterfaceTester
 from ops import ActiveStatus
 from scenario import Container, Mount, State, Exec
 from unittest.mock import MagicMock
-from cosl.coordinated_workers.worker import CONFIG_FILE, ServiceEndpointStatus
+from cosl.coordinated_workers.worker import CONFIG_FILE
 
 from charm import TempoWorkerK8SOperatorCharm
 
 k8s_resource_patch_ready = MagicMock(return_value=True)
+
 
 @contextmanager
 def _urlopen_patch(url: str, resp, tls: bool = False):
@@ -60,7 +61,11 @@ def interface_tester(interface_tester: InterfaceTester):
                                     Container(
                                         name="tempo",
                                         can_connect=True,
-                                        mounts={"worker-config": Mount(location=CONFIG_FILE, source=conf_file)},
+                                        mounts={
+                                            "worker-config": Mount(
+                                                location=CONFIG_FILE, source=conf_file
+                                            )
+                                        },
                                         execs={
                                             Exec(("update-ca-certificates", "--fresh")),
                                         },
