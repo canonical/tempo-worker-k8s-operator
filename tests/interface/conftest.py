@@ -49,7 +49,7 @@ def interface_tester(interface_tester: InterfaceTester):
         get_status=lambda _: ActiveStatus(""),
         is_ready=k8s_resource_patch_ready,
     ):
-        with patch("cosl.coordinated_workers.worker.check_readiness", new ):
+        with patch("cosl.coordinated_workers.worker.check_readiness", new=readiness_check):
             with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
                 with patch("lightkube.core.client.GenericSyncClient"):
                     with patch("subprocess.run"):
