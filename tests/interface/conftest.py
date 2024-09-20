@@ -10,7 +10,7 @@ import pytest
 from charms.tempo_k8s.v1.charm_tracing import charm_tracing_disabled
 from interface_tester import InterfaceTester
 from ops import ActiveStatus
-from scenario import Container, Mount, State, ExecOutput
+from scenario import Container, Mount, State, Exec
 from unittest.mock import MagicMock
 from cosl.coordinated_workers.worker import CONFIG_FILE
 
@@ -60,7 +60,7 @@ def interface_tester(interface_tester: InterfaceTester):
                                         can_connect=True,
                                         mounts={"worker-config": Mount(CONFIG_FILE, conf_file)},
                                         exec_mock={
-                                            ("update-ca-certificates", "--fresh"): ExecOutput(),
+                                            Exec(("update-ca-certificates", "--fresh")),
                                         },
                                     )
                                 ],
