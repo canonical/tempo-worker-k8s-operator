@@ -10,11 +10,13 @@ import pytest
 from charms.tempo_k8s.v1.charm_tracing import charm_tracing_disabled
 from interface_tester import InterfaceTester
 from ops import ActiveStatus
-from scenario import Container, Mount, State, ExecOutput
+from scenario import Container, Mount, State, Exec
 from unittest.mock import MagicMock
 from cosl.coordinated_workers.worker import CONFIG_FILE
 
 from charm import TempoWorkerK8SOperatorCharm
+
+k8s_resource_patch_ready = MagicMock(return_value=True)
 
 
 @contextmanager
@@ -45,6 +47,7 @@ def interface_tester(interface_tester: InterfaceTester):
         _namespace="test-namespace",
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
+        is_ready=k8s_resource_patch_ready,
     ):
         with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
             with patch("lightkube.core.client.GenericSyncClient"):
@@ -58,9 +61,13 @@ def interface_tester(interface_tester: InterfaceTester):
                                     Container(
                                         name="tempo",
                                         can_connect=True,
-                                        mounts={"worker-config": Mount(CONFIG_FILE, conf_file)},
-                                        exec_mock={
-                                            ("update-ca-certificates", "--fresh"): ExecOutput(),
+                                        mounts={
+                                            "worker-config": Mount(
+                                                location=CONFIG_FILE, source=conf_file
+                                            )
+                                        },
+                                        execs={
+                                            Exec(("update-ca-certificates", "--fresh")),
                                         },
                                     )
                                 ],
