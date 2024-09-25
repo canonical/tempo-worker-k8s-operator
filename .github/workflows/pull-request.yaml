@@ -67,3 +67,12 @@ jobs:
         run: cd coordinator; tox -vve integration
         env:
           TEMPO_WORKER_CHARM: $GITHUB_WORKSPACE/tempo-worker-k8s_ubuntu-22.04-amd64.charm
+  
+  # TODO move this to the centralized CI
+  terraform-lint:
+    name: Terraform lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive -diff
