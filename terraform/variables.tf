@@ -1,7 +1,7 @@
 variable "app_name" {
   description = "Application name"
   type        = string
-  default = "tempo-worker"
+  default     = "tempo-worker"
 }
 
 variable "channel" {
