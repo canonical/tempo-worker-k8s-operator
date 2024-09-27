@@ -13,12 +13,12 @@ The module offers the following configurable inputs:
 
 | Name | Type | Description | Required |
 | - | - | - | - |
-| `app_name`| string | Application name | False |
-| `channel`| string | Channel that the charm is deployed from | False |
-| `config`| map(any) | Map of the charm configuration options | False |
-| `model_name`| string | Name of the model that the charm is deployed on | True |
-| `revision`| number | Revision number of the charm name | False |
-| `units`| number | Number of units to deploy | False |
+| `app_name`| string | Application name | tempo-worker |
+| `channel`| string | Channel that the charm is deployed from | latest/stable |
+| `config`| map(any) | Map of the charm configuration options | {} |
+| `model_name`| string | Name of the model that the charm is deployed on |  |
+| `revision`| number | Revision number of the charm name | null |
+| `units`| number | Number of units to deploy | 1 |
 
 ### Outputs
 Upon applied, the module exports the following outputs:
