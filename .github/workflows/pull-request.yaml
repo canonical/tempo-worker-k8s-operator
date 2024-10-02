@@ -70,4 +70,4 @@ jobs:
   
   terraform-checks:
     name: Terraform
-    uses: canonical/observability/.github/workflows/terraform-quality-checks.yaml@OPENG-2685
+    uses: canonical/observability/.github/workflows/terraform-quality-checks.yaml@main

@@ -14,7 +14,7 @@ The module offers the following configurable inputs:
 | Name | Type | Description | Required |
 | - | - | - | - |
 | `app_name`| string | Application name | tempo-worker |
-| `channel`| string | Channel that the charm is deployed from | latest/stable |
+| `channel`| string | Channel that the charm is deployed from | latest/edge |
 | `config`| map(any) | Map of the charm configuration options | {} |
 | `model_name`| string | Name of the model that the charm is deployed on |  |
 | `revision`| number | Revision number of the charm name | null |
@@ -31,7 +31,6 @@ Upon applied, the module exports the following outputs:
 
 ## Usage
 
-TODO: Update Tempo HA Terraform module link 
 > [!NOTE]
 > This module is intended to be used only in conjunction with its counterpart, [Tempo coordinator module](https://github.com/canonical/tempo-coordinator-k8s-operator) and, when deployed in isolation, is not functional. 
 > For the Tempo HA solution module deployment, check [Tempo HA module](https://github.com/canonical/observability)
