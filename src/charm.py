@@ -11,8 +11,6 @@ import socket
 import logging
 from typing import Optional, Dict, Any
 
-import ops.pebble
-import tenacity
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent
 from ops.charm import CharmBase
