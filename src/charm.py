@@ -11,6 +11,8 @@ import socket
 import logging
 from typing import Optional, Dict, Any
 
+import ops.pebble
+import tenacity
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent
 from ops.charm import CharmBase
@@ -18,7 +20,7 @@ from ops.main import main
 from ops.model import BlockedStatus, ActiveStatus
 from ops.pebble import Layer
 
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 
 
 # Log messages can be retrieved using juju debug-log
