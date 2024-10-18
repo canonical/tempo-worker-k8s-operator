@@ -7,6 +7,7 @@ from ops import ActiveStatus
 from ops import BlockedStatus
 from scenario import State, Container, Relation
 
+from charm import MetricsGeneratorStoragePathMissing
 from tests.scenario.conftest import _urlopen_patch
 import json
 
@@ -112,4 +113,29 @@ def test_status_too_many_roles_enabled(roles_enabled, ctx):
         state_out = ctx.run(ctx.on.collect_unit_status(), state)
         assert state_out.unit_status == BlockedStatus(
             f"cannot have more than 1 enabled role: {list(roles_enabled) + (['all'] if 'all' not in roles_enabled else [])}"
+        )
+
+
+def test_blocked_config_generator_no_config(ctx):
+    cluster_relation = Relation(
+        "tempo-cluster",
+        remote_app_data={
+            "worker_config": json.dumps("some: yaml"),
+        },
+    )
+
+    state = State(
+        leader=True,
+        containers=[tempo_container],
+        relations=[cluster_relation],
+    )
+
+    with endpoint_ready(), config_on_disk():
+        with ctx(ctx.on.collect_unit_status(), set_role(state, "metrics-generator")) as mgr:
+            state_out = mgr.run()
+            with pytest.raises(MetricsGeneratorStoragePathMissing):
+                mgr.charm.generate_worker_layer(mgr.charm.worker)
+
+        assert state_out.unit_status == BlockedStatus(
+            "No prometheus remote-write relation configured on the coordinator"
         )
