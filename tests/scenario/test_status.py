@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from functools import partial
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from ops import ActiveStatus
@@ -136,4 +136,6 @@ def test_blocked_config_generator_no_config(ctx):
             with pytest.raises(MetricsGeneratorStoragePathMissing):
                 mgr.charm.generate_worker_layer(mgr.charm.worker)
 
-        assert state_out.unit_status == BlockedStatus("No prometheus remote-write relation configured on the coordinator")
+        assert state_out.unit_status == BlockedStatus(
+            "No prometheus remote-write relation configured on the coordinator"
+        )

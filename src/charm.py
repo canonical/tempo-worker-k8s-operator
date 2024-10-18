@@ -21,7 +21,6 @@ from ops.charm import CharmBase
 from ops.main import main
 from ops.model import BlockedStatus, ActiveStatus
 from ops.pebble import Layer
-from scenario.runtime import Runtime
 
 from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 
@@ -38,6 +37,7 @@ class RolesConfigurationError(Exception):
 
 class TempoWorker(Worker):
     """A Tempo worker class that inherits from the Worker class."""
+
     SERVICE_START_RETRY_STOP = tenacity.stop_after_delay(60)
     SERVICE_START_RETRY_WAIT = tenacity.wait_fixed(5)
 
@@ -169,12 +169,13 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             # verify we have a metrics storage path configured, else
             # Tempo will fail to start with a bad error.
             if not self.worker.cluster.get_remote_write_endpoints():
-                logger.error("cannot start this metrics-generator node without remote-write endpoints."
-                             "Please relate the coordinator with a prometheus instance.")
+                logger.error(
+                    "cannot start this metrics-generator node without remote-write endpoints."
+                    "Please relate the coordinator with a prometheus instance."
+                )
                 # this will tell the Worker that something is wrong and this node can't be started
                 # update-status will inform the user of what's going on
                 raise MetricsGeneratorStoragePathMissing()
-
 
         return Layer(
             {
