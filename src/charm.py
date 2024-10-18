@@ -9,14 +9,19 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import socket
 import logging
+import ssl
 from typing import Optional, Dict, Any
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
-from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
+import tenacity
+from cosl.coordinated_workers.worker import CONFIG_FILE, Worker, ServiceEndpointStatus, WorkerError
 from ops import CollectStatusEvent
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import BlockedStatus, ActiveStatus
 from ops.pebble import Layer
+from scenario.runtime import Runtime
 
 from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 
@@ -33,17 +38,19 @@ class RolesConfigurationError(Exception):
 
 class TempoWorker(Worker):
     """A Tempo worker class that inherits from the Worker class."""
+    SERVICE_START_RETRY_STOP = tenacity.stop_after_delay(60)
+    SERVICE_START_RETRY_WAIT = tenacity.wait_fixed(5)
 
     @property
     def _worker_config(self) -> Dict[str, Any]:
         """Override property to add unit-specific configurations, like juju topology."""
         config = super()._worker_config
         if "all" in self.roles or "metrics-generator" in self.roles:
-            config = self._add_juju_topolgy(config)
+            config = self._add_juju_topology(config)
 
         return config
 
-    def _add_juju_topolgy(self, config: Dict[str, Any]):
+    def _add_juju_topology(self, config: Dict[str, Any]):
         """Modify the worker config to add juju topology for `metrics-generator`'s generated metrics."""
         # if `metrics_generator` doesn't exist in config,
         # then it is not enabled, so no point of adding juju topology.
@@ -55,6 +62,52 @@ class TempoWorker(Worker):
             )
 
         return config
+
+    def check_readiness(self) -> ServiceEndpointStatus:
+        """If the user has configured a readiness check endpoint, GET it and check the workload status."""
+        check_endpoint = self._readiness_check_endpoint
+        if not check_endpoint:
+            raise WorkerError(
+                "cannot check readiness without a readiness_check_endpoint configured. "
+                "Pass one to Worker on __init__."
+            )
+
+        try:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            with urlopen(check_endpoint(self), context=ctx) as response:
+                html: bytes = response.read()
+
+            # ready response should simply be a string:
+            #   "ready"
+            raw_out = html.decode("utf-8").strip()
+            if raw_out == "ready":
+                return ServiceEndpointStatus.up
+
+            # depending on the workload, we get something like:
+            #   Some services are not Running:
+            #   Starting: 1
+            #   Running: 16
+            # (tempo)
+            #   Ingester not ready: waiting for 15s after being ready
+            # (mimir)
+
+            # anything that isn't 'ready' but also is a 2xx response will be interpreted as:
+            # we're not ready yet, but we're working on it.
+            logger.debug(f"GET {check_endpoint} returned: {raw_out!r}.")
+            return ServiceEndpointStatus.starting
+
+        except HTTPError:
+            logger.debug("Error getting readiness endpoint: server not up (yet)")
+        except Exception:
+            logger.exception("Unexpected exception getting readiness endpoint")
+        return ServiceEndpointStatus.down
+
+
+class MetricsGeneratorStoragePathMissing(RuntimeError):
+    """Raised if the worker node is a metrics-generator and we are missing some config."""
 
 
 @trace_charm(
@@ -112,6 +165,16 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         role = roles[0]
         if role == "all":
             role = "scalable-single-binary"
+        elif role == "metrics-generator":
+            # verify we have a metrics storage path configured, else
+            # Tempo will fail to start with a bad error.
+            if not self.worker.cluster.get_remote_write_endpoints():
+                logger.error("cannot start this metrics-generator node without remote-write endpoints."
+                             "Please relate the coordinator with a prometheus instance.")
+                # this will tell the Worker that something is wrong and this node can't be started
+                # update-status will inform the user of what's going on
+                raise MetricsGeneratorStoragePathMissing()
+
 
         return Layer(
             {
