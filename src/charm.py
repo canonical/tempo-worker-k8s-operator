@@ -9,13 +9,10 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import socket
 import logging
-import ssl
 from typing import Optional, Dict, Any
-from urllib.error import HTTPError
-from urllib.request import urlopen
 
 import tenacity
-from cosl.coordinated_workers.worker import CONFIG_FILE, Worker, ServiceEndpointStatus, WorkerError
+from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
 from ops import CollectStatusEvent
 from ops.charm import CharmBase
 from ops.main import main
@@ -62,48 +59,6 @@ class TempoWorker(Worker):
             )
 
         return config
-
-    def check_readiness(self) -> ServiceEndpointStatus:
-        """If the user has configured a readiness check endpoint, GET it and check the workload status."""
-        check_endpoint = self._readiness_check_endpoint
-        if not check_endpoint:
-            raise WorkerError(
-                "cannot check readiness without a readiness_check_endpoint configured. "
-                "Pass one to Worker on __init__."
-            )
-
-        try:
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-
-            with urlopen(check_endpoint(self), context=ctx) as response:
-                html: bytes = response.read()
-
-            # ready response should simply be a string:
-            #   "ready"
-            raw_out = html.decode("utf-8").strip()
-            if raw_out == "ready":
-                return ServiceEndpointStatus.up
-
-            # depending on the workload, we get something like:
-            #   Some services are not Running:
-            #   Starting: 1
-            #   Running: 16
-            # (tempo)
-            #   Ingester not ready: waiting for 15s after being ready
-            # (mimir)
-
-            # anything that isn't 'ready' but also is a 2xx response will be interpreted as:
-            # we're not ready yet, but we're working on it.
-            logger.debug(f"GET {check_endpoint} returned: {raw_out!r}.")
-            return ServiceEndpointStatus.starting
-
-        except HTTPError:
-            logger.debug("Error getting readiness endpoint: server not up (yet)")
-        except Exception:
-            logger.exception("Unexpected exception getting readiness endpoint")
-        return ServiceEndpointStatus.down
 
 
 class MetricsGeneratorStoragePathMissing(RuntimeError):
@@ -168,7 +123,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
         elif role == "metrics-generator":
             # verify we have a metrics storage path configured, else
             # Tempo will fail to start with a bad error.
-            if not self.worker.cluster.get_remote_write_endpoints():
+            if not worker.cluster.get_remote_write_endpoints():
                 logger.error(
                     "cannot start this metrics-generator node without remote-write endpoints."
                     "Please relate the coordinator with a prometheus instance."
