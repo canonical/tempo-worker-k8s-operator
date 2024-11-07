@@ -132,7 +132,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                 # update-status will inform the user of what's going on
                 raise MetricsGeneratorStoragePathMissing()
 
-        tempo_endpoint = worker.cluster.get_tracing_receivers().get("jaeger_thrift_http", None)
+        tempo_endpoint = worker.cluster.get_tracing_receivers().get("jaeger_thrift_http", None)  # type: ignore
         return Layer(
             {
                 "summary": "tempo worker layer",
