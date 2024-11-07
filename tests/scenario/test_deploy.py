@@ -56,6 +56,7 @@ def test_pebble_ready_plan(ctx, role):
                 "summary": "tempo worker process",
                 "command": f"/bin/tempo -config.file=/etc/worker/config.yaml -target {role if role != 'all' else 'scalable-single-binary'}",
                 "startup": "enabled",
+                "environment": {"OTEL_EXPORTER_JAEGER_ENDPOINT": ""},
             }
         },
     }

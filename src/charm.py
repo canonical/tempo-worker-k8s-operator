@@ -132,6 +132,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                 # update-status will inform the user of what's going on
                 raise MetricsGeneratorStoragePathMissing()
 
+        tempo_endpoint = worker.cluster.get_tracing_receivers().get("jaeger_thrift_http", None)
         return Layer(
             {
                 "summary": "tempo worker layer",
@@ -142,6 +143,19 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                         "summary": "tempo worker process",
                         "command": f"/bin/tempo -config.file={CONFIG_FILE} -target {role}",
                         "startup": "enabled",
+                        "environment": {
+                            # TODO: Future Tempo versions would be using otlp, so use these env variables instead.
+                            # Configure Tempo workload traces
+                            # "OTEL_TRACES_EXPORTER": "otlp",
+                            # "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (
+                            #     f"{tempo_endpoint}/v1/traces" if tempo_endpoint else ""
+                            # ),
+                            "OTEL_EXPORTER_JAEGER_ENDPOINT": (
+                                f"{tempo_endpoint}/api/traces?format=jaeger.thrift"
+                                if tempo_endpoint
+                                else ""
+                            )
+                        },
                     }
                 },
             }
