@@ -9,7 +9,7 @@ Integrate it with a `tempo-k8s` coordinator unit to start.
 """
 import socket
 import logging
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 import tenacity
 from cosl.coordinated_workers.worker import CONFIG_FILE, Worker
@@ -66,8 +66,8 @@ class MetricsGeneratorStoragePathMissing(RuntimeError):
 
 
 @trace_charm(
-    tracing_endpoint="tempo_endpoint",
-    server_cert="ca_cert_path",
+    tracing_endpoint="_charm_tracing_endpoint",
+    server_cert="_charm_tracing_cert",
     extra_types=[Worker],
 )
 class TempoWorkerK8SOperatorCharm(CharmBase):
@@ -88,17 +88,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             resources_requests=self.get_resources_requests,
             container_name="tempo",
         )
-
-    @property
-    def tempo_endpoint(self) -> Optional[str]:
-        """Tempo endpoint for charm tracing."""
-        if endpoints := self.worker.cluster.get_tracing_receivers():
-            return endpoints.get("otlp_http")
-
-    @property
-    def ca_cert_path(self) -> Optional[str]:
-        """CA certificate path for tls tracing."""
-        return CA_PATH
+        self._charm_tracing_endpoint, self._charm_tracing_cert = self.worker.charm_tracing_config()
 
     @staticmethod
     def readiness_check_endpoint(worker: Worker) -> str:
