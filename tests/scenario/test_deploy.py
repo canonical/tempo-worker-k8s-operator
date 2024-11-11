@@ -47,8 +47,18 @@ tempo_container = Container(
         "metrics-generator",
     ],
 )
+@patch.object(JujuTopology, "from_charm")
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
-def test_pebble_ready_plan(ctx, role):
+def test_pebble_ready_plan(topology_mock, ctx, role):
+    charm_topo = JujuTopology(
+        model="test",
+        model_uuid="00000000-0000-4000-8000-000000000000",
+        application="worker",
+        unit="worker/0",
+        charm_name="tempo",
+    )
+    topology_mock.return_value = charm_topo
+
     expected_plan = {
         "services": {
             "tempo": {
@@ -56,7 +66,11 @@ def test_pebble_ready_plan(ctx, role):
                 "summary": "tempo worker process",
                 "command": f"/bin/tempo -config.file=/etc/worker/config.yaml -target {role if role != 'all' else 'scalable-single-binary'}",
                 "startup": "enabled",
-                "environment": {"OTEL_EXPORTER_JAEGER_ENDPOINT": ""},
+                "environment": {
+                    "OTEL_EXPORTER_JAEGER_ENDPOINT": "",
+                    "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={charm_topo.application},juju_model={charm_topo.model}"
+                    + f",juju_model_uuid={charm_topo.model_uuid},juju_unit={charm_topo.unit},juju_charm={charm_topo.charm_name}",
+                },
             }
         },
     }
