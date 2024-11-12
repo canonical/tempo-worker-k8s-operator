@@ -121,7 +121,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                 # this will tell the Worker that something is wrong and this node can't be started
                 # update-status will inform the user of what's going on
                 raise MetricsGeneratorStoragePathMissing()
-        tempo_endpoint = worker.cluster.get_tracing_receivers().get("jaeger_thrift_http", None)  # type: ignore
+        tempo_endpoint = worker.cluster.get_workload_tracing_receivers().get("jaeger_thrift_http", None)
         topology = worker.cluster.juju_topology
         return Layer(
             {
