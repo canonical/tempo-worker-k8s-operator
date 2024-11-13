@@ -4,6 +4,9 @@ output "app_name" {
 
 output "endpoints" {
   value = {
+    # Requires
     tempo_cluster = "tempo-cluster"
+
+    # Provides
   }
 }
