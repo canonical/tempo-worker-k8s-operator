@@ -6,7 +6,6 @@ output "endpoints" {
   value = {
     # Requires
     tempo_cluster = "tempo-cluster"
-
     # Provides
   }
 }
