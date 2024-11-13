@@ -51,6 +51,7 @@ tempo_container = Container(
     "workload_tracing_receivers, expected_env",
     (
         (None, {}),
+        ({"otlp_http": "1.2.3.4"}, {}),
         (
             {"jaeger_thrift_http": "1.2.3.4"},
             {
