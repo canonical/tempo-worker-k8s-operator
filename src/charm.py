@@ -121,8 +121,27 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                 # this will tell the Worker that something is wrong and this node can't be started
                 # update-status will inform the user of what's going on
                 raise MetricsGeneratorStoragePathMissing()
-        tempo_endpoint = worker.cluster.get_workload_tracing_receivers().get("jaeger_thrift_http", None)
-        topology = worker.cluster.juju_topology
+
+        # Configure Tempo workload traces
+        env = {}
+        if tempo_endpoint := worker.cluster.get_workload_tracing_receivers().get(
+            "jaeger_thrift_http", None
+        ):
+            topology = worker.cluster.juju_topology
+            env.update(
+                {
+                    # TODO: Future Tempo versions would be using otlp, so use these env variables instead.
+                    # "OTEL_TRACES_EXPORTER": "otlp",
+                    # "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (
+                    #     f"{tempo_endpoint}/v1/traces" if tempo_endpoint else ""
+                    # ),
+                    "OTEL_EXPORTER_JAEGER_ENDPOINT": (
+                        f"{tempo_endpoint}/api/traces?format=jaeger.thrift"
+                    ),
+                    "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={topology.application},juju_model={topology.model}"
+                    + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
+                }
+            )
         return Layer(
             {
                 "summary": "tempo worker layer",
@@ -133,21 +152,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                         "summary": "tempo worker process",
                         "command": f"/bin/tempo -config.file={CONFIG_FILE} -target {role}",
                         "startup": "enabled",
-                        # Configure Tempo workload traces
-                        "environment": {
-                            # TODO: Future Tempo versions would be using otlp, so use these env variables instead.
-                            # "OTEL_TRACES_EXPORTER": "otlp",
-                            # "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (
-                            #     f"{tempo_endpoint}/v1/traces" if tempo_endpoint else ""
-                            # ),
-                            "OTEL_EXPORTER_JAEGER_ENDPOINT": (
-                                f"{tempo_endpoint}/api/traces?format=jaeger.thrift"
-                                if tempo_endpoint
-                                else ""
-                            ),
-                            "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={topology.application},juju_model={topology.model}"
-                            + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
-                        },
+                        "environment": env,
                     }
                 },
             }

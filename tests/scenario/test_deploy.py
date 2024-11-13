@@ -47,17 +47,35 @@ tempo_container = Container(
         "metrics-generator",
     ],
 )
-@patch.object(JujuTopology, "from_charm")
+@pytest.mark.parametrize(
+    "workload_tracing_receivers, expected_env",
+    (
+        (None, {}),
+        (
+            {"jaeger_thrift_http": "1.2.3.4"},
+            {
+                "OTEL_EXPORTER_JAEGER_ENDPOINT": "1.2.3.4/api/traces?format=jaeger.thrift",
+                "OTEL_RESOURCE_ATTRIBUTES": "juju_application=worker,juju_model=test"
+                + ",juju_model_uuid=00000000-0000-4000-8000-000000000000,juju_unit=worker/0,juju_charm=tempo",
+            },
+        ),
+    ),
+)
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
-def test_pebble_ready_plan(topology_mock, ctx, role):
-    charm_topo = JujuTopology(
-        model="test",
-        model_uuid="00000000-0000-4000-8000-000000000000",
-        application="worker",
-        unit="worker/0",
-        charm_name="tempo",
-    )
-    topology_mock.return_value = charm_topo
+@patch.object(
+    JujuTopology,
+    "from_charm",
+    MagicMock(
+        return_value=JujuTopology(
+            model="test",
+            model_uuid="00000000-0000-4000-8000-000000000000",
+            application="worker",
+            unit="worker/0",
+            charm_name="tempo",
+        )
+    ),
+)
+def test_pebble_ready_plan(ctx, workload_tracing_receivers, expected_env, role):
 
     expected_plan = {
         "services": {
@@ -66,14 +84,11 @@ def test_pebble_ready_plan(topology_mock, ctx, role):
                 "summary": "tempo worker process",
                 "command": f"/bin/tempo -config.file=/etc/worker/config.yaml -target {role if role != 'all' else 'scalable-single-binary'}",
                 "startup": "enabled",
-                "environment": {
-                    "OTEL_EXPORTER_JAEGER_ENDPOINT": "",
-                    "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={charm_topo.application},juju_model={charm_topo.model}"
-                    + f",juju_model_uuid={charm_topo.model_uuid},juju_unit={charm_topo.unit},juju_charm={charm_topo.charm_name}",
-                },
             }
         },
     }
+    if expected_env:
+        expected_plan["services"]["tempo"]["environment"] = expected_env
 
     state_out = ctx.run(
         ctx.on.pebble_ready(tempo_container),
@@ -86,6 +101,7 @@ def test_pebble_ready_plan(topology_mock, ctx, role):
                         remote_app_data={
                             "worker_config": json.dumps("beef"),
                             "remote_write_endpoints": json.dumps([{"url": "http://test:3000"}]),
+                            "workload_tracing_receivers": json.dumps(workload_tracing_receivers),
                         },
                     )
                 ],
