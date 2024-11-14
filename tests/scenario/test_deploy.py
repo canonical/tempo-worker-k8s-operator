@@ -47,8 +47,37 @@ tempo_container = Container(
         "metrics-generator",
     ],
 )
+@pytest.mark.parametrize(
+    "workload_tracing_receivers, expected_env",
+    (
+        (None, {}),
+        ({"otlp_http": "1.2.3.4"}, {}),
+        (
+            {"jaeger_thrift_http": "1.2.3.4"},
+            {
+                "OTEL_EXPORTER_JAEGER_ENDPOINT": "1.2.3.4/api/traces?format=jaeger.thrift",
+                "OTEL_RESOURCE_ATTRIBUTES": "juju_application=worker,juju_model=test"
+                + ",juju_model_uuid=00000000-0000-4000-8000-000000000000,juju_unit=worker/0,juju_charm=tempo",
+            },
+        ),
+    ),
+)
 @patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
-def test_pebble_ready_plan(ctx, role):
+@patch.object(
+    JujuTopology,
+    "from_charm",
+    MagicMock(
+        return_value=JujuTopology(
+            model="test",
+            model_uuid="00000000-0000-4000-8000-000000000000",
+            application="worker",
+            unit="worker/0",
+            charm_name="tempo",
+        )
+    ),
+)
+def test_pebble_ready_plan(ctx, workload_tracing_receivers, expected_env, role):
+
     expected_plan = {
         "services": {
             "tempo": {
@@ -59,6 +88,8 @@ def test_pebble_ready_plan(ctx, role):
             }
         },
     }
+    if expected_env:
+        expected_plan["services"]["tempo"]["environment"] = expected_env
 
     state_out = ctx.run(
         ctx.on.pebble_ready(tempo_container),
@@ -71,6 +102,7 @@ def test_pebble_ready_plan(ctx, role):
                         remote_app_data={
                             "worker_config": json.dumps("beef"),
                             "remote_write_endpoints": json.dumps([{"url": "http://test:3000"}]),
+                            "workload_tracing_receivers": json.dumps(workload_tracing_receivers),
                         },
                     )
                 ],
