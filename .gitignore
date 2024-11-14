@@ -10,3 +10,4 @@ __pycache__/
 .vscode/
 .terraform*
 *.tfstate*
+.charm_tracing_buffer*
