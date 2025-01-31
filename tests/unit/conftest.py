@@ -49,5 +49,7 @@ def ctx():
     return Context(charm_type=TempoWorkerK8SOperatorCharm)
 
 
-TEMPO_VERSION_EXEC_OUTPUT = Exec(command_prefix=("/bin/tempo", "-version"), stdout="1.31")
+TEMPO_VERSION_EXEC_OUTPUT = Exec(
+    command_prefix=("/bin/tempo", "-version"), stdout="1.31"
+)
 UPDATE_CA_CERTS_EXEC_OUTPUT = Exec(command_prefix=("update-ca-certificates", "--fresh"))

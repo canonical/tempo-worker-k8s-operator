@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Tempo workload management objects."""
+
 import logging
 import socket
 from typing import Dict, Any
@@ -45,7 +46,8 @@ class TempoWorker(Worker):
             readiness_check_endpoint=self._readiness_check_endpoint,
             resources_requests=lambda _: {"cpu": "50m", "memory": "200Mi"},
             # container we want to resource-patch
-            container_name=self.container_name)
+            container_name=self.container_name,
+        )
 
     @staticmethod
     def _readiness_check_endpoint(worker: Worker) -> str:
@@ -105,7 +107,7 @@ class TempoWorker(Worker):
         # Configure Tempo workload traces
         env = {}
         if tempo_endpoint := worker.cluster.get_workload_tracing_receivers().get(
-                "jaeger_thrift_http", None
+            "jaeger_thrift_http", None
         ):
             topology = worker.cluster.juju_topology
             env.update(
@@ -119,7 +121,7 @@ class TempoWorker(Worker):
                         f"{tempo_endpoint}/api/traces?format=jaeger.thrift"
                     ),
                     "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={topology.application},juju_model={topology.model}"
-                                                + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
+                    + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
                 }
             )
         return Layer(
@@ -137,3 +139,13 @@ class TempoWorker(Worker):
                 },
             }
         )
+
+    def set_status(self, e: ops.CollectStatusEvent):
+        """Register all statuses the Worker collects on this event."""
+        return Worker._on_collect_status(self, e)
+
+    def _on_collect_status(self, e: ops.CollectStatusEvent):
+        # skip the collect_unit_status event the Worker is observing,
+        # to allow the tempo charm to override the priority: see
+        # https://github.com/canonical/cos-lib/issues/120
+        pass
