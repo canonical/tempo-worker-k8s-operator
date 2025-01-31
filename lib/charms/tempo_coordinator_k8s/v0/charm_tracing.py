@@ -338,7 +338,7 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 
-LIBPATCH = 5
+LIBPATCH = 6
 
 PYDEPS = ["opentelemetry-exporter-otlp-proto-http==1.21.0"]
 
@@ -648,16 +648,24 @@ def _get_server_cert(
     server_cert_attr: str,
     charm_instance: ops.CharmBase,
     charm_type: Type[ops.CharmBase],
-):
+)->Optional[Path]:
+    # get server cert from charm
     _server_cert = getattr(charm_instance, server_cert_attr)
     if callable(_server_cert):
         server_cert = _server_cert()
     else:
         server_cert = _server_cert
 
+    # validate result
     if server_cert is None:
         logger.warning(
             f"{charm_type}.{server_cert_attr} is None; sending traces over INSECURE connection."
+        )
+        return
+    elif not isinstance(server_cert, (str, Path)):
+        logger.error(
+            f"{charm_type}.{server_cert_attr} returned unexpected type "
+            f"(expected str|Path, got {type(server_cert).__name__})"
         )
         return
     elif not Path(server_cert).is_absolute():
@@ -665,7 +673,7 @@ def _get_server_cert(
             f"{charm_type}.{server_cert_attr} should resolve to a valid tls cert absolute path (string | Path)); "
             f"got {server_cert} instead."
         )
-    return server_cert
+    return Path(server_cert)
 
 
 def _setup_root_span_initializer(
@@ -724,7 +732,7 @@ def _setup_root_span_initializer(
             # however we can buffer things until tracing comes online
             buffer_only = True
 
-        server_cert: Optional[Union[str, Path]] = (
+        server_cert: Optional[Path] = (
             _get_server_cert(server_cert_attr, self, charm_type) if server_cert_attr else None
         )
 
