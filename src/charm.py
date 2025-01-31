@@ -3,9 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Tempo worker charm.
-This charm deploys a Tempo worker application on k8s Juju models.
-
-Integrate it with a `tempo-k8s` coordinator unit to start.
+This charm deploys a Tempo worker application on k8s Juju models..
 """
 
 import logging
