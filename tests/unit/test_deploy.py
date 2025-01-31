@@ -9,12 +9,12 @@ from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRe
 from ops.model import ActiveStatus
 from scenario import Container, Relation, State, Mount
 
-from tests.scenario.conftest import (
+from tests.unit.conftest import (
     TEMPO_VERSION_EXEC_OUTPUT,
     _urlopen_patch,
     UPDATE_CA_CERTS_EXEC_OUTPUT,
 )
-from tests.scenario.helpers import set_role
+from tests.unit.helpers import set_role
 from cosl.coordinated_workers.worker import CONFIG_FILE
 from cosl.juju_topology import JujuTopology
 

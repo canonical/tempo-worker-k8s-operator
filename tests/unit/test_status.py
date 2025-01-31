@@ -7,13 +7,13 @@ from ops import ActiveStatus
 from ops import BlockedStatus
 from scenario import State, Container, Relation
 
-from charm import MetricsGeneratorStoragePathMissing
-from tests.scenario.conftest import _urlopen_patch
+from tempo import MetricsGeneratorStoragePathMissing
+from tests.unit.conftest import _urlopen_patch
 import json
 
 
-from tests.scenario.conftest import UPDATE_CA_CERTS_EXEC_OUTPUT
-from tests.scenario.helpers import set_role
+from tests.unit.conftest import UPDATE_CA_CERTS_EXEC_OUTPUT
+from tests.unit.helpers import set_role
 
 tempo_container = Container("tempo", can_connect=True, execs={UPDATE_CA_CERTS_EXEC_OUTPUT})
 
