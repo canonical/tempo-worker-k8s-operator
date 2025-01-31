@@ -24,9 +24,7 @@ fmt:
 
 unit:
 	uv run --all-extras \
-		coverage run \
-		--source=$(SRC) \
-		-m pytest \
+		pytest \
 		--ignore=$(TESTS)/integration \
 		--tb native \
 		-v \
@@ -40,7 +38,6 @@ unit:
         --cov-report=json:$(SRC)/results/coverage-unit.json \
         --junit-xml=$(SRC)/results/test-results-unit.xml \
 		$(ARGS)
-#	uv run --all-extras coverage report
 
 integration:
 	uv run --all-extras \
