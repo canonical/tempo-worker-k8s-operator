@@ -7,15 +7,17 @@ from ops import ActiveStatus
 from ops import BlockedStatus
 from scenario import State, Container, Relation
 
-from charm import MetricsGeneratorStoragePathMissing
-from tests.scenario.conftest import _urlopen_patch
+from tempo import MetricsGeneratorStoragePathMissing
+from tests.unit.conftest import _urlopen_patch
 import json
 
 
-from tests.scenario.conftest import UPDATE_CA_CERTS_EXEC_OUTPUT
-from tests.scenario.helpers import set_role
+from tests.unit.conftest import UPDATE_CA_CERTS_EXEC_OUTPUT
+from tests.unit.helpers import set_role
 
-tempo_container = Container("tempo", can_connect=True, execs={UPDATE_CA_CERTS_EXEC_OUTPUT})
+tempo_container = Container(
+    "tempo", can_connect=True, execs={UPDATE_CA_CERTS_EXEC_OUTPUT}
+)
 
 
 @contextmanager
@@ -29,14 +31,17 @@ def endpoint_starting(tls: bool = False):
 
 @contextmanager
 def endpoint_ready(tls: bool = False):
-    with patch("urllib.request.urlopen", new=partial(_urlopen_patch, tls=tls, resp="ready")):
+    with patch(
+        "urllib.request.urlopen", new=partial(_urlopen_patch, tls=tls, resp="ready")
+    ):
         yield
 
 
 @contextmanager
 def config_on_disk():
     with patch(
-        "cosl.coordinated_workers.worker.Worker._running_worker_config", new=lambda _: True
+        "cosl.coordinated_workers.worker.Worker._running_worker_config",
+        new=lambda _: True,
     ):
         yield
 
@@ -52,12 +57,13 @@ def config_on_disk():
         ),
         (
             "metrics-generator",
-            BlockedStatus("No prometheus remote-write relation configured on the coordinator"),
+            BlockedStatus(
+                "No prometheus remote-write relation configured on the coordinator"
+            ),
         ),
     ),
 )
 def test_status_remote_write_endpoints(role_str, expected, ctx):
-
     cluster_relation = Relation(
         "tempo-cluster",
         remote_app_data={
@@ -131,10 +137,12 @@ def test_blocked_config_generator_no_config(ctx):
     )
 
     with endpoint_ready(), config_on_disk():
-        with ctx(ctx.on.collect_unit_status(), set_role(state, "metrics-generator")) as mgr:
+        with ctx(
+            ctx.on.collect_unit_status(), set_role(state, "metrics-generator")
+        ) as mgr:
             state_out = mgr.run()
             with pytest.raises(MetricsGeneratorStoragePathMissing):
-                mgr.charm.generate_worker_layer(mgr.charm.worker)
+                mgr.charm.worker._layer(mgr.charm.worker)
 
         assert state_out.unit_status == BlockedStatus(
             "No prometheus remote-write relation configured on the coordinator"

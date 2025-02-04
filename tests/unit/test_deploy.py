@@ -9,12 +9,12 @@ from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRe
 from ops.model import ActiveStatus
 from scenario import Container, Relation, State, Mount
 
-from tests.scenario.conftest import (
+from tests.unit.conftest import (
     TEMPO_VERSION_EXEC_OUTPUT,
     _urlopen_patch,
     UPDATE_CA_CERTS_EXEC_OUTPUT,
 )
-from tests.scenario.helpers import set_role
+from tests.unit.helpers import set_role
 from cosl.coordinated_workers.worker import CONFIG_FILE
 from cosl.juju_topology import JujuTopology
 
@@ -62,7 +62,9 @@ tempo_container = Container(
         ),
     ),
 )
-@patch.object(ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"}))
+@patch.object(
+    ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"})
+)
 @patch.object(
     JujuTopology,
     "from_charm",
@@ -77,7 +79,6 @@ tempo_container = Container(
     ),
 )
 def test_pebble_ready_plan(ctx, workload_tracing_receivers, expected_env, role):
-
     expected_plan = {
         "services": {
             "tempo": {
@@ -101,8 +102,12 @@ def test_pebble_ready_plan(ctx, workload_tracing_receivers, expected_env, role):
                         "tempo-cluster",
                         remote_app_data={
                             "worker_config": json.dumps("beef"),
-                            "remote_write_endpoints": json.dumps([{"url": "http://test:3000"}]),
-                            "workload_tracing_receivers": json.dumps(workload_tracing_receivers),
+                            "remote_write_endpoints": json.dumps(
+                                [{"url": "http://test:3000"}]
+                            ),
+                            "workload_tracing_receivers": json.dumps(
+                                workload_tracing_receivers
+                            ),
                         },
                     )
                 ],
@@ -146,7 +151,9 @@ def test_role(ctx, role_str, expected):
         ),
     )
     if expected:
-        data = ClusterRequirerAppData.load(out.get_relations("tempo-cluster")[0].local_app_data)
+        data = ClusterRequirerAppData.load(
+            out.get_relations("tempo-cluster")[0].local_app_data
+        )
         assert data.role == expected
     else:
         assert not out.get_relations("tempo-cluster")[0].local_app_data
@@ -161,7 +168,6 @@ def test_role(ctx, role_str, expected):
 )
 @patch.object(JujuTopology, "from_charm")
 def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
-
     charm_topo = JujuTopology(
         model="test",
         model_uuid="00000000-0000-4000-8000-000000000000",
@@ -178,7 +184,9 @@ def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
         "tempo-cluster",
         remote_app_data={
             "worker_config": json.dumps(data),
-            "remote_write_endpoints": json.dumps([{"url": "http://prometheus:3000/push"}]),
+            "remote_write_endpoints": json.dumps(
+                [{"url": "http://prometheus:3000/push"}]
+            ),
         },
     )
 
@@ -202,5 +210,7 @@ def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
     # assert that topology is added to config
     updated_config = yaml.safe_load(cfg_file.read_text())
     assert updated_config == {
-        "metrics_generator": {"registry": {"external_labels": dict(charm_topo.as_dict())}}
+        "metrics_generator": {
+            "registry": {"external_labels": dict(charm_topo.as_dict())}
+        }
     }

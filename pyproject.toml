@@ -1,4 +1,27 @@
 # Testing tools configuration
+[project]
+name = "tempo-worker-k8s-operator"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+dependencies = [
+    "ops",
+    "cosl",
+    "pydantic <3",
+    # ---PYDEPS---
+    # lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py
+    "opentelemetry-exporter-otlp-proto-http==1.21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "coverage[toml]",
+    "ops[testing]",
+    "pyright",
+    "ruff"
+]
 
 [tool.coverage.run]
 branch = true
