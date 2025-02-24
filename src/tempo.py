@@ -49,11 +49,31 @@ class TempoWorker(Worker):
             container_name=self.container_name,
         )
 
+    def restart(self):
+        # if there's a version mismatch, we don't want to restart,
+        # as the service will never come up and will remain stuck in the restart loop
+        if not self.version_mismatch:
+            super().restart()
+
     @staticmethod
     def _readiness_check_endpoint(worker: Worker) -> str:
         """Endpoint for worker readiness checks."""
         scheme = "https" if worker.cluster.get_tls_data() else "http"
         return f"{scheme}://{socket.getfqdn()}:3200/ready"
+
+    @property
+    def version_mismatch(self) -> bool:
+        """Check if the config is not compatible with the running workload version."""
+        running_version = self.running_version()
+        config_version = self.cluster.get_worker_config_version()
+        config = self.cluster.get_worker_config()
+        if (
+            config
+            and running_version
+            and (not config_version or (config_version != running_version))
+        ):
+            return True
+        return False
 
     @property
     def _worker_config(self) -> Dict[str, Any]:

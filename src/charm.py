@@ -40,20 +40,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             self.worker.charm_tracing_config()
         )
 
-    @property
-    def version_mismatch(self) -> bool:
-        """Check if the config is not compatible with the running workload version."""
-        running_version = self.worker.running_version()
-        config_version = self.worker.cluster.get_worker_config_version()
-        config = self.worker.cluster.get_worker_config()
-        if (
-            config
-            and running_version
-            and (not config_version or (config_version != running_version))
-        ):
-            return True
-        return False
-
     def _on_collect_status(self, e: CollectStatusEvent):
         # add Tempo worker-specific statuses
         roles = self.worker.roles
@@ -61,7 +47,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             e.add_status(
                 BlockedStatus(f"cannot have more than 1 enabled role: {roles}")
             )
-        if self.version_mismatch:
+        if self.worker.version_mismatch:
             e.add_status(
                 BlockedStatus(
                     "Config is incompatible with the running workload version. Please refresh the coordinator to a later version."
