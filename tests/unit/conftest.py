@@ -11,6 +11,9 @@ from unittest.mock import patch
 from charm import TempoWorkerK8SOperatorCharm
 
 
+VERSION = "2.4.0"
+
+
 @contextmanager
 def _urlopen_patch(url: str, resp, tls: bool = False):
     if url == f"{'https' if tls else 'http'}://{socket.getfqdn()}:3200/ready":
@@ -50,6 +53,6 @@ def ctx():
 
 
 TEMPO_VERSION_EXEC_OUTPUT = Exec(
-    command_prefix=("/bin/tempo", "-version"), stdout="1.31"
+    command_prefix=("/bin/tempo", "-version"), stdout=f"version {VERSION}"
 )
 UPDATE_CA_CERTS_EXEC_OUTPUT = Exec(command_prefix=("update-ca-certificates", "--fresh"))

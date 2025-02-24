@@ -62,10 +62,6 @@ class TempoWorker(Worker):
         if "all" in self.roles or "metrics-generator" in self.roles:
             config = self._add_juju_topology(config)
 
-        # starting from Tempo 2.7.0, use_otel_tracer config option is removed.
-        if "use_otel_tracer" in config:
-            del config["use_otel_tracer"]
-
         return config
 
     def _add_juju_topology(self, config: Dict[str, Any]):
@@ -110,27 +106,15 @@ class TempoWorker(Worker):
 
         # Configure Tempo workload traces
         env = {}
-        receivers = worker.cluster.get_workload_tracing_receivers()
-        otlp_endpoint = receivers.get("otlp_http", None)
-        jaeger_endpoint = receivers.get("jaeger_thrift_http", None)
-
-        if otlp_endpoint:
+        if tempo_endpoint := worker.cluster.get_workload_tracing_receivers().get(
+            "otlp_http", None
+        ):
             topology = worker.cluster.juju_topology
             env.update(
                 {
                     "OTEL_TRACES_EXPORTER": "otlp",
-                    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": f"{otlp_endpoint}/v1/traces",
+                    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": f"{tempo_endpoint}/v1/traces",
                     "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={topology.application},juju_model={topology.model}"
-                    + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
-                }
-            )
-        # Keep Jaeger env configuration for backward compatibility
-        elif jaeger_endpoint:
-            topology = worker.cluster.juju_topology
-            env.update(
-                {
-                    "JAEGER_ENDPOINT": f"{jaeger_endpoint}/api/traces?format=jaeger.thrift",
-                    "JAEGER_TAGS": f"juju_application={topology.application},juju_model={topology.model}"
                     + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
                 }
             )
