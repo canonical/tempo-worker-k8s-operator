@@ -168,8 +168,8 @@ bases:
 parts:
   charm:
     # todo: do we still need those?
-    #    build-packages:
-    #      - git
+    build-packages:
+      - git
     #      - libffi-dev
     #      - libssl-dev
     #      - pkg-config
