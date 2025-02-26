@@ -17,6 +17,8 @@ from tempo import TempoWorker
 
 logger = logging.getLogger(__name__)
 
+_LEGACY_WORKER_PORTS = 3200, 4317, 4318, 9411, 14268, 7946, 9096, 14250
+
 
 @trace_charm(
     tracing_endpoint="_charm_tracing_endpoint",
@@ -28,11 +30,21 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        # FIXME take ports from tempo instead of using hardcoded ports set
-        #  https://github.com/canonical/tempo-coordinator-k8s-operator/issues/106
-        self.unit.set_ports(3200, 4317, 4318, 9411, 14268, 7946, 9096, 14250)
-
         self.worker = TempoWorker(self)
+
+        # if the worker has received some ports from the coordinator,
+        # it's in charge of ensuring they're opened.
+        if not self.worker.cluster.get_worker_ports():
+            # legacy behaviour fallback: older interface versions didn't tell us which
+            # ports we should be opening, so we opened all of them.
+            # This can happen when talking to an old coordinator revision, or
+            # if the coordinator hasn't published its data yet.
+            logger.warning(
+                "Cluster interface hasn't published a list of worker ports (yet?). "
+                "If this issue persists after the cluster has settled, you should "
+                "upgrade the coordinator to a newer revision."
+            )
+            self.unit.set_ports(*_LEGACY_WORKER_PORTS)
 
         # event handling
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
@@ -48,9 +60,9 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
                 BlockedStatus(f"cannot have more than 1 enabled role: {roles}")
             )
         if (
-            roles
-            and self.worker.cluster.relation
-            and not self.worker.cluster.get_remote_write_endpoints()
+                roles
+                and self.worker.cluster.relation
+                and not self.worker.cluster.get_remote_write_endpoints()
         ):
             if "all" in roles:
                 e.add_status(
