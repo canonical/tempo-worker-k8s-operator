@@ -47,7 +47,6 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             e.add_status(
                 BlockedStatus(f"cannot have more than 1 enabled role: {roles}")
             )
-
         if (
             roles
             and self.worker.cluster.relation

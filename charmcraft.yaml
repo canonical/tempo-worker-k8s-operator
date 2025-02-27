@@ -168,8 +168,13 @@ bases:
 parts:
   charm:
     # todo: do we still need those?
-    build-packages:
-      - git
+    #    build-packages:
+    #      - git
+    #      - libffi-dev
+    #      - libssl-dev
+    #      - pkg-config
+    #      - rustc
+    #      - cargo
     charm-binary-python-packages:
       - "pydantic>=2"
       - "opentelemetry-exporter-otlp-proto-http==1.21.0"
