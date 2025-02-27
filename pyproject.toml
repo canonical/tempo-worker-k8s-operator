@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "ops",
-    "cosl@git+https://github.com/canonical/cos-lib@publish-version",
+    "cosl",
     "pydantic <3",
     # ---PYDEPS---
     # lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py

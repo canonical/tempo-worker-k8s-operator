@@ -47,12 +47,7 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             e.add_status(
                 BlockedStatus(f"cannot have more than 1 enabled role: {roles}")
             )
-        if self.worker.version_mismatch:
-            e.add_status(
-                BlockedStatus(
-                    "Config is incompatible with the running workload version. Please refresh the coordinator to a later version."
-                )
-            )
+
         if (
             roles
             and self.worker.cluster.relation

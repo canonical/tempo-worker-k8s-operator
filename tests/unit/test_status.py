@@ -3,22 +3,21 @@ from functools import partial
 from unittest.mock import patch
 
 import pytest
-from ops import BlockedStatus, WaitingStatus, ActiveStatus
+from ops import BlockedStatus, ActiveStatus
 from scenario import State, Container, Relation
 
 from tempo import MetricsGeneratorStoragePathMissing
 from tests.unit.conftest import _urlopen_patch
 import json
-from conftest import VERSION
 
 
-from tests.unit.conftest import UPDATE_CA_CERTS_EXEC_OUTPUT, TEMPO_VERSION_EXEC_OUTPUT
+from tests.unit.conftest import UPDATE_CA_CERTS_EXEC_OUTPUT
 from tests.unit.helpers import set_role
 
 tempo_container = Container(
     "tempo",
     can_connect=True,
-    execs={UPDATE_CA_CERTS_EXEC_OUTPUT, TEMPO_VERSION_EXEC_OUTPUT},
+    execs={UPDATE_CA_CERTS_EXEC_OUTPUT},
 )
 
 
@@ -70,7 +69,6 @@ def test_status_remote_write_endpoints(role_str, expected, ctx):
         "tempo-cluster",
         remote_app_data={
             "worker_config": json.dumps("some: yaml"),
-            "worker_config_version": json.dumps(VERSION),
         },
     )
 
@@ -108,7 +106,6 @@ def test_status_too_many_roles_enabled(roles_enabled, ctx):
         "tempo-cluster",
         remote_app_data={
             "worker_config": json.dumps("some: yaml"),
-            "worker_config_version": json.dumps(VERSION),
         },
     )
 
@@ -131,7 +128,6 @@ def test_blocked_config_generator_no_config(ctx):
         "tempo-cluster",
         remote_app_data={
             "worker_config": json.dumps("some: yaml"),
-            "worker_config_version": json.dumps(VERSION),
         },
     )
 
@@ -152,47 +148,3 @@ def test_blocked_config_generator_no_config(ctx):
         assert state_out.unit_status == BlockedStatus(
             "No prometheus remote-write relation configured on the coordinator"
         )
-
-
-def test_blocked_no_config_version(ctx):
-    cluster_relation = Relation(
-        "tempo-cluster",
-        remote_app_data={
-            "worker_config": json.dumps("some: yaml"),
-        },
-    )
-
-    state = State(
-        leader=True,
-        containers=[tempo_container],
-        relations=[cluster_relation],
-    )
-
-    with endpoint_ready(), config_on_disk():
-        with ctx(ctx.on.collect_unit_status(), state) as mgr:
-            state_out = mgr.run()
-
-        assert state_out.unit_status == BlockedStatus(
-            "Config is incompatible with the running workload version. Please refresh the coordinator to a later version."
-        )
-
-
-def test_waiting_no_config_no_version(ctx):
-    cluster_relation = Relation(
-        "tempo-cluster",
-        remote_app_data={
-            "worker_config": "",
-        },
-    )
-
-    state = State(
-        leader=True,
-        containers=[tempo_container],
-        relations=[cluster_relation],
-    )
-
-    with endpoint_ready():
-        with ctx(ctx.on.collect_unit_status(), state) as mgr:
-            state_out = mgr.run()
-
-        assert state_out.unit_status.name == WaitingStatus.name

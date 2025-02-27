@@ -8,7 +8,6 @@ import pytest
 from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
 from ops.model import ActiveStatus
 from scenario import Container, Relation, State, Mount
-from conftest import VERSION
 
 from tests.unit.conftest import (
     TEMPO_VERSION_EXEC_OUTPUT,
@@ -71,10 +70,8 @@ tempo_container = Container(
         ),
     ),
 )
-@patch.multiple(
-    ClusterRequirer,
-    get_worker_config=MagicMock(return_value={"config": "config"}),
-    get_worker_config_version=MagicMock(return_value=VERSION),
+@patch.object(
+    ClusterRequirer, "get_worker_config", MagicMock(return_value={"config": "config"})
 )
 @patch.object(
     JujuTopology,
@@ -113,7 +110,6 @@ def test_pebble_ready_plan(ctx, workload_tracing_receivers, expected_env, role):
                         "tempo-cluster",
                         remote_app_data={
                             "worker_config": json.dumps("beef"),
-                            "worker_config_version": json.dumps(VERSION),
                             "remote_write_endpoints": json.dumps(
                                 [{"url": "http://test:3000"}]
                             ),
@@ -211,7 +207,6 @@ def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
                 mounts={"cfg": Mount(location=CONFIG_FILE, source=cfg_file)},
                 execs={
                     UPDATE_CA_CERTS_EXEC_OUTPUT,
-                    TEMPO_VERSION_EXEC_OUTPUT,
                 },
             )
         ],
