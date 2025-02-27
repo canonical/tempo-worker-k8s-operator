@@ -107,23 +107,18 @@ class TempoWorker(Worker):
         # Configure Tempo workload traces
         env = {}
         if tempo_endpoint := worker.cluster.get_workload_tracing_receivers().get(
-            "jaeger_thrift_http", None
+            "otlp_http", None
         ):
             topology = worker.cluster.juju_topology
             env.update(
                 {
-                    # TODO: Future Tempo versions would be using otlp, so use these env variables instead.
-                    # "OTEL_TRACES_EXPORTER": "otlp",
-                    # "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": (
-                    #     f"{tempo_endpoint}/v1/traces" if tempo_endpoint else ""
-                    # ),
-                    "OTEL_EXPORTER_JAEGER_ENDPOINT": (
-                        f"{tempo_endpoint}/api/traces?format=jaeger.thrift"
-                    ),
+                    "OTEL_TRACES_EXPORTER": "otlp",
+                    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": f"{tempo_endpoint}/v1/traces",
                     "OTEL_RESOURCE_ATTRIBUTES": f"juju_application={topology.application},juju_model={topology.model}"
                     + f",juju_model_uuid={topology.model_uuid},juju_unit={topology.unit},juju_charm={topology.charm_name}",
                 }
             )
+
         return Layer(
             {
                 "summary": "tempo worker layer",
