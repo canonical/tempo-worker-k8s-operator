@@ -69,6 +69,5 @@ convention = "google"
 
 [tool.pyright]
 include = ["src"]
-extraPaths = ["lib"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
