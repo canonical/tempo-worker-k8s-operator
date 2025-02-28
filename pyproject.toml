@@ -16,7 +16,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-cov",
     "coverage[toml]",
     "ops[testing]",
     "pyright",
@@ -26,6 +25,7 @@ dev = [
 [tool.coverage.run]
 branch = true
 parallel = true
+source = ["src"]
 omit = ["tests/**", "lib/**"]
 
 [tool.coverage.report]
@@ -39,6 +39,8 @@ testpaths = [
     "tests/unit",
     "tests/scenario"
 ]
+addopts = "--tb=native --verbose --capture=no --log-cli-level=INFO"
+
 
 # Formatting tools configuration
 [tool.black]
