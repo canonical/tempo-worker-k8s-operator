@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "ops",
-    "cosl",
+    "cosl>=0.0.56",
     "pydantic <3",
     # ---PYDEPS---
     # lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py
@@ -16,7 +16,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-cov",
     "coverage[toml]",
     "ops[testing]",
     "pyright",
@@ -26,6 +25,7 @@ dev = [
 [tool.coverage.run]
 branch = true
 parallel = true
+source = ["src"]
 omit = ["tests/**", "lib/**"]
 
 [tool.coverage.report]
@@ -39,6 +39,8 @@ testpaths = [
     "tests/unit",
     "tests/scenario"
 ]
+addopts = "--tb=native --verbose --capture=no --log-cli-level=INFO"
+
 
 # Formatting tools configuration
 [tool.black]
@@ -72,6 +74,5 @@ convention = "google"
 
 [tool.pyright]
 include = ["src"]
-extraPaths = ["lib"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
