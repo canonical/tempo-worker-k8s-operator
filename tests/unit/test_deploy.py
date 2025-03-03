@@ -51,14 +51,22 @@ tempo_container = Container(
     "workload_tracing_receivers, expected_env",
     (
         (None, {}),
-        ({"otlp_http": "1.2.3.4"}, {}),
         (
-            {"jaeger_thrift_http": "1.2.3.4"},
+            {"otlp_http": "1.2.3.4", "jaeger_thrift_http": "5.6.7.8"},
             {
-                "OTEL_EXPORTER_JAEGER_ENDPOINT": "1.2.3.4/api/traces?format=jaeger.thrift",
                 "OTEL_RESOURCE_ATTRIBUTES": "juju_application=worker,juju_model=test"
                 + ",juju_model_uuid=00000000-0000-4000-8000-000000000000,juju_unit=worker/0,juju_charm=tempo",
+                "OTEL_TRACES_EXPORTER": "otlp",
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "1.2.3.4/v1/traces",
             },
+        ),
+        (
+            {"jaeger_thrift_http": "1.2.3.4"},
+            {},
+        ),
+        (
+            {"zipkin": "1.2.3.4"},
+            {},
         ),
     ),
 )
