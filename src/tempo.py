@@ -71,9 +71,12 @@ class TempoWorker(Worker):
         if "metrics_generator" in config:
             if "registry" not in config["metrics_generator"]:
                 config["metrics_generator"]["registry"] = {}
-            config["metrics_generator"]["registry"]["external_labels"] = dict(
-                self.cluster.juju_topology.as_dict()
-            )
+            labels = {
+                "juju_{}".format(key): value
+                for key, value in self.cluster.juju_topology.as_dict().items()
+                if value
+            }
+            config["metrics_generator"]["registry"]["external_labels"] = labels
 
         return config
 
