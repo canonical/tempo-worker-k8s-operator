@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 
 [[package]]
@@ -116,7 +117,11 @@ wheels = [
 [[package]]
 name = "cosl"
 version = "0.0.55"
+<<<<<<< HEAD
 source = { registry = "https://pypi.org/simple" }
+=======
+source = { git = "https://github.com/canonical/cos-lib?rev=feat%2Fopen_specific_worker_ports#4668edcccee4510a33d72620dc9eb9b6292068ae" }
+>>>>>>> 285505e (fmt)
 dependencies = [
     { name = "lightkube" },
     { name = "ops" },
@@ -125,10 +130,13 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
+<<<<<<< HEAD
 sdist = { url = "https://files.pythonhosted.org/packages/4d/83/96cec403e992be7d283b5538f53e3bfe39723d61092776d45c3768136ecf/cosl-0.0.55.tar.gz", hash = "sha256:d3b8ee6f78302ac111d3a15d36c42a38c298a806161d762869513d348d778316", size = 76014 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/b2/63e8c8e084129230f97dacf7878e611e6f73f004fba530139770fd681542/cosl-0.0.55-py3-none-any.whl", hash = "sha256:bf641d611f982c8f494f3cf72ac4181b24e30c69504cfbd55aa8f54964797f90", size = 61014 },
 ]
+=======
+>>>>>>> 285505e (fmt)
 
 [[package]]
 name = "coverage"
@@ -718,7 +726,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cosl" },
+    { name = "cosl", git = "https://github.com/canonical/cos-lib?rev=feat%2Fopen_specific_worker_ports" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = "==1.21.0" },
     { name = "ops" },
@@ -729,6 +737,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "tenacity"
