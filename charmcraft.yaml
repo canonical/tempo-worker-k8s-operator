@@ -167,14 +167,9 @@ bases:
 
 parts:
   charm:
-    # todo: do we still need those?
+    # uncomment this if you need git+ dependencies while developing:
     #    build-packages:
     #      - git
-    #      - libffi-dev
-    #      - libssl-dev
-    #      - pkg-config
-    #      - rustc
-    #      - cargo
     charm-binary-python-packages:
-      - "pydantic>=2"
+      - "pydantic<3"
       - "opentelemetry-exporter-otlp-proto-http==1.21.0"

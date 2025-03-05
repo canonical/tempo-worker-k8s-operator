@@ -49,4 +49,4 @@ integration:
 		$(ARGS)
 
 static:
-	uv run --all-extras pyright $(SRC)
+	uv run --all-extras pyright
