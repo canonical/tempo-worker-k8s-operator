@@ -217,8 +217,13 @@ def test_config_juju_topology(topology_mock, role_str, ctx, tmp_path):
 
     # assert that topology is added to config
     updated_config = yaml.safe_load(cfg_file.read_text())
+    expected_labels = {
+        "juju_model": "test",
+        "juju_model_uuid": "00000000-0000-4000-8000-000000000000",
+        "juju_application": "worker",
+        "juju_unit": "worker/0",
+        "juju_charm_name": "tempo",
+    }
     assert updated_config == {
-        "metrics_generator": {
-            "registry": {"external_labels": dict(charm_topo.as_dict())}
-        }
+        "metrics_generator": {"registry": {"external_labels": expected_labels}}
     }
