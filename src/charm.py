@@ -39,10 +39,11 @@ class TempoWorkerK8SOperatorCharm(CharmBase):
             # ports we should be opening, so we opened all of them.
             # This can happen when talking to an old coordinator revision, or
             # if the coordinator hasn't published its data yet.
-            logger.warning(
+            logger.info(
                 "Cluster interface hasn't published a list of worker ports (yet?). "
                 "If this issue persists after the cluster has settled, you should "
-                "upgrade the coordinator to a newer revision."
+                "upgrade the coordinator to a newer revision. Falling back now to "
+                "legacy behaviour and opening all ports."
             )
             self.unit.set_ports(*_LEGACY_WORKER_PORTS)
 
