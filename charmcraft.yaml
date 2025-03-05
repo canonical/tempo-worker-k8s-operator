@@ -167,7 +167,7 @@ bases:
 
 parts:
   charm:
-    # uncomment this if you need git+ dependencies while developing:
+    # uncomment this if you need git+ dependencies while developing
     #    build-packages:
     #      - git
     charm-binary-python-packages:
