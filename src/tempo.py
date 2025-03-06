@@ -66,7 +66,7 @@ class TempoWorker(Worker):
         # as it will never start and we'll be stuck executing the hook.
         # Exit and let collect-unit-status set the charm to blocked.
         roles = self.roles
-        if len(roles) > 0 and "metrics-generator" in roles:
+        if "metrics-generator" in (roles or ()):
             if not self.cluster.get_remote_write_endpoints():
                 logger.error(
                     "cannot start this metrics-generator node without remote-write endpoints."
