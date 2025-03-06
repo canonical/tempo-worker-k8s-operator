@@ -171,5 +171,5 @@ parts:
     #    build-packages:
     #      - git
     charm-binary-python-packages:
-      - "pydantic>=2"
+      - "pydantic<3"
       - "opentelemetry-exporter-otlp-proto-http==1.21.0"
