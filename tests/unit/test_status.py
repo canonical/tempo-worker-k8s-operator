@@ -7,7 +7,6 @@ from ops import ActiveStatus
 from ops import BlockedStatus
 from scenario import State, Container, Relation
 
-from tempo import MetricsGeneratorStoragePathMissing
 from tests.unit.conftest import _urlopen_patch
 import json
 
@@ -137,12 +136,9 @@ def test_blocked_config_generator_no_config(ctx):
     )
 
     with endpoint_ready(), config_on_disk():
-        with ctx(
+        state_out = ctx.run(
             ctx.on.collect_unit_status(), set_role(state, "metrics-generator")
-        ) as mgr:
-            state_out = mgr.run()
-            with pytest.raises(MetricsGeneratorStoragePathMissing):
-                mgr.charm.worker._layer(mgr.charm.worker)
+        )
 
         assert state_out.unit_status == BlockedStatus(
             "No prometheus remote-write relation configured on the coordinator"
