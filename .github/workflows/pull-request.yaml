@@ -61,8 +61,9 @@ jobs:
         run: charmcraft pack -p ./worker
 
       - name: Run the coordinator charm's integration tests
-        run: cd coordinator; TEMPO_WORKER_CHARM=$GITHUB_WORKSPACE/tempo-worker-k8s_ubuntu-22.04-amd64.charm tox -vve integration
-
+        run: cd coordinator; tox -vve integration
+        env:
+          TEMPO_WORKER_CHARM: $GITHUB_WORKSPACE/tempo-worker-k8s_ubuntu-22.04-amd64.charm
   
   terraform-checks:
     name: Terraform
