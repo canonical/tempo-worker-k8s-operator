@@ -54,19 +54,15 @@ jobs:
           provider: microk8s
           channel: 1.26-strict/stable
           microk8s-group: snap_microk8s
-          microk8s-addons: "hostpath-storage dns metallb:${{ steps.ip_range.outputs.ip_range }}"
+          microk8s-addons: "hostpath-storage dns metallb:${{ steps.ip_range.outputs.ip_range }} rbac"
           charmcraft-channel: "3.x/candidate"
-
-      - name: Enable rbac
-        run: sudo microk8s enable rbac
 
       - name: Build the worker charm
         run: charmcraft pack -p ./worker
 
       - name: Run the coordinator charm's integration tests
-        run: cd coordinator; tox -vve integration
-        env:
-          TEMPO_WORKER_CHARM: $GITHUB_WORKSPACE/tempo-worker-k8s_ubuntu-22.04-amd64.charm
+        run: cd coordinator; TEMPO_WORKER_CHARM=$GITHUB_WORKSPACE/tempo-worker-k8s_ubuntu-22.04-amd64.charm tox -vve integration
+
   
   terraform-checks:
     name: Terraform
