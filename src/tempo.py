@@ -20,10 +20,6 @@ class TempoError(Exception):
     """Base class for custom errors raised by this module."""
 
 
-class MetricsGeneratorStoragePathMissing(TempoError):
-    """Raised if the worker node is a metrics-generator and we are missing some config."""
-
-
 class RolesConfigurationError(TempoError):
     """Raised when the worker has an invalid role(s) set in its config."""
 
@@ -64,6 +60,21 @@ class TempoWorker(Worker):
 
         return config
 
+    def restart(self):
+        """Override the worker's restart logic."""
+        # if we don't have the remote-write endpoints, don't try to restart the Tempo service
+        # as it will never start and we'll be stuck executing the hook.
+        # Exit and let collect-unit-status set the charm to blocked.
+        roles = self.roles
+        if "metrics-generator" in (roles or ()):
+            if not self.cluster.get_remote_write_endpoints():
+                logger.error(
+                    "cannot start this metrics-generator node without remote-write endpoints."
+                    "Please relate the coordinator with a prometheus instance."
+                )
+                return
+        super().restart()
+
     def _add_juju_topology(self, config: Dict[str, Any]):
         """Modify the worker config to add juju topology for `metrics-generator`'s generated metrics."""
         # if `metrics_generator` doesn't exist in config,
@@ -95,17 +106,6 @@ class TempoWorker(Worker):
         role = roles[0]
         if role == "all":
             role = "scalable-single-binary"
-        elif role == "metrics-generator":
-            # verify we have a metrics storage path configured, else
-            # Tempo will fail to start with a bad error.
-            if not worker.cluster.get_remote_write_endpoints():
-                logger.error(
-                    "cannot start this metrics-generator node without remote-write endpoints."
-                    "Please relate the coordinator with a prometheus instance."
-                )
-                # this will tell the Worker that something is wrong and this node can't be started
-                # update-status will inform the user of what's going on
-                raise MetricsGeneratorStoragePathMissing()
 
         # Configure Tempo workload traces
         env = {}
