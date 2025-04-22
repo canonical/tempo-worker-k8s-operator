@@ -26,6 +26,7 @@ links:
 requires:
   tempo-cluster:
     interface: tempo_cluster
+    optional: false
     limit: 1
 
 storage:
