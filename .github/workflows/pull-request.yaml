@@ -75,7 +75,3 @@ jobs:
         run: cd coordinator; tox -vve integration
         env:
           TEMPO_WORKER_CHARM: ${{ github.workspace }}/worker/tempo-worker-k8s_ubuntu-22.04-amd64.charm
-
-  terraform-checks:
-    name: Terraform
-    uses: canonical/observability/.github/workflows/terraform-quality-checks.yaml@v0
