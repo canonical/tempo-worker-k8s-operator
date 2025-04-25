@@ -26,6 +26,7 @@ links:
 requires:
   tempo-cluster:
     interface: tempo_cluster
+    optional: false
     limit: 1
 
 storage:
@@ -156,20 +157,19 @@ config:
       
 # build info
 
-bases:
-  - build-on:
-      - name: ubuntu
-        channel: "22.04"
-    run-on:
-      - name: ubuntu
-        channel: "22.04"
+platforms:
+  ubuntu@22.04:amd64:
 
 
 parts:
   charm:
-    # uncomment this if you need git+ dependencies while developing:
-    #    build-packages:
-    #      - git
-    charm-binary-python-packages:
-      - "pydantic<3"
-      - "opentelemetry-exporter-otlp-proto-http==1.21.0"
+    source: .
+    plugin: uv
+    build-snaps: [ astral-uv ]
+    build-packages:
+      - git
+      - cargo
+      - rustc
+    override-build: |
+      craftctl default
+      git describe --always > $CRAFT_PART_INSTALL/version
