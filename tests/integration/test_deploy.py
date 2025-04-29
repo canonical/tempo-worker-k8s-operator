@@ -13,7 +13,7 @@ def test_deploy_worker(juju: Juju, tempo_worker_charm: Path):
         tempo_worker_charm, WORKER_APP, resources=WORKER_RESOURCES, trust=True
     )
 
-    # worker will be blocked because of missing s3 and coordinator integration
+    # worker will be blocked because of missing coordinator integration
     juju.wait(
         lambda status: all_blocked(status, WORKER_APP),
         timeout=1000
