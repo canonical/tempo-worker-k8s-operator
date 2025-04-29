@@ -10,10 +10,8 @@ from minio import Minio
 ACCESS_KEY = "accesskey"
 SECRET_KEY = "secretkey"
 BUCKET_NAME = "tempo"
-# Application names used uniformly across the tests
 MINIO_APP = "minio"
 S3_APP = "s3-integrator"
-PROMETHEUS_APP = "prometheus"
 WORKER_APP = "tempo-worker"
 TEMPO_APP = "tempo"
 METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
