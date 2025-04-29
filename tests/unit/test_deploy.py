@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
+import socket
 from functools import partial
 from unittest.mock import patch, MagicMock
 import yaml
@@ -22,6 +23,11 @@ from cosl.juju_topology import JujuTopology
 @pytest.fixture(autouse=True)
 def patch_urllib_request():
     with patch("urllib.request.urlopen", new=partial(_urlopen_patch, resp="ready")):
+        yield
+
+@pytest.fixture(autouse=True)
+def patch_stop():
+    with patch("ops.model.Container.stop"):
         yield
 
 
@@ -87,7 +93,15 @@ tempo_container = Container(
     ),
 )
 def test_pebble_ready_plan(ctx, workload_tracing_receivers, expected_env, role):
+    host = socket.getfqdn()
     expected_plan = {
+        "checks": {
+            "ready": {
+                "http": {"url": f"http://{host}:3200/ready"},
+                "override": "replace",
+                "threshold": 3
+            }
+        },
         "services": {
             "tempo": {
                 "override": "replace",

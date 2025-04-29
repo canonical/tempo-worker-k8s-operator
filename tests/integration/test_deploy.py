@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import jubilant
 import pytest
 from jubilant import Juju, all_active, all_blocked
 
