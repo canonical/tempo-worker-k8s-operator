@@ -3,7 +3,7 @@ from pathlib import PosixPath
 from unittest.mock import MagicMock
 import socket
 import pytest
-from cosl.coordinated_workers.worker import ROOT_CA_CERT
+from coordinated_workers.worker import ROOT_CA_CERT
 from scenario import Context, Exec
 from ops import ActiveStatus
 from unittest.mock import patch
@@ -29,7 +29,7 @@ class NonWriteablePath(PosixPath):
 @pytest.fixture(autouse=True)
 def patch_all():
     with patch.multiple(
-        "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch",
+        "coordinated_workers.worker.KubernetesComputeResourcesPatch",
         _namespace="test-namespace",
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
@@ -38,7 +38,7 @@ def patch_all():
         with patch("lightkube.core.client.GenericSyncClient"):
             with patch("subprocess.run"):
                 with patch(
-                    "cosl.coordinated_workers.worker.ROOT_CA_CERT",
+                    "coordinated_workers.worker.ROOT_CA_CERT",
                     new=NonWriteablePath(ROOT_CA_CERT),
                 ):
                     yield
