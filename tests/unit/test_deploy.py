@@ -6,7 +6,7 @@ from functools import partial
 from unittest.mock import patch, MagicMock
 import yaml
 import pytest
-from cosl.coordinated_workers.interface import ClusterRequirerAppData, ClusterRequirer
+from coordinated_workers.interfaces.cluster import ClusterRequirerAppData, ClusterRequirer
 from ops.model import ActiveStatus
 from scenario import Container, Relation, State, Mount
 
@@ -16,7 +16,7 @@ from tests.unit.conftest import (
     UPDATE_CA_CERTS_EXEC_OUTPUT,
 )
 from tests.unit.helpers import set_role
-from cosl.coordinated_workers.worker import CONFIG_FILE
+from coordinated_workers.worker import CONFIG_FILE
 from cosl.juju_topology import JujuTopology
 
 

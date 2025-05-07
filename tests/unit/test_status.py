@@ -39,7 +39,7 @@ def endpoint_ready(tls: bool = False):
 @contextmanager
 def config_on_disk():
     with patch(
-        "cosl.coordinated_workers.worker.Worker._running_worker_config",
+        "coordinated_workers.worker.Worker._running_worker_config",
         new=lambda _: True,
     ):
         yield

@@ -6,7 +6,10 @@ requires-python = ">=3.10"
 
 dependencies = [
     "ops",
-    "cosl>=0.0.56",
+    # FIXME: use cosl from pypi
+    "cosl@git+https://github.com/canonical/cos-lib@migrate-coord-workers",
+    # FIXME: use coordinated-worker from pypi
+    "coordinated-workers@git+https://github.com/canonical/cos-coordinated-workers@migrate-coord-workers",
     "pydantic <3",
     # ---PYDEPS---
     # lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py
