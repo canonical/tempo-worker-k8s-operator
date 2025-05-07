@@ -12,7 +12,7 @@ from interface_tester import InterfaceTester
 from ops import ActiveStatus
 from scenario import Container, Mount, State, Exec
 from unittest.mock import MagicMock
-from cosl.coordinated_workers.worker import CONFIG_FILE
+from coordinated_workers.worker import CONFIG_FILE
 
 from charm import TempoWorkerK8SOperatorCharm
 
@@ -43,7 +43,7 @@ def interface_tester(interface_tester: InterfaceTester):
     conf_file.write_text("foo: bar")
 
     with patch.multiple(
-        "cosl.coordinated_workers.worker.KubernetesComputeResourcesPatch",
+        "coordinated_workers.worker.KubernetesComputeResourcesPatch",
         _namespace="test-namespace",
         _patch=lambda _: None,
         get_status=lambda _: ActiveStatus(""),
