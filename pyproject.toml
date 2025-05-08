@@ -18,7 +18,7 @@ dev = [
     "pytest",
     "coverage[toml]",
     "ops[testing]",
-    "pyright",
+    "pyright<1.1.399", # 1.1.399 vendors typeshed that dropped Python 3.8 support
     "ruff",
     #   INTEGRATION TESTS
     "jubilant",
