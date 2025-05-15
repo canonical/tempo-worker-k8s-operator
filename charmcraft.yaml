@@ -7,8 +7,7 @@ title: Tempo Charmed Operator worker node
 
 assumes:
   - k8s-api
-  # Juju 3.4+ needed for pebble log forwarding
-  - juju >= 3.4.0
+  - juju >= 3.6.0
 
 summary: Tempo for Kubernetes clusters.
 description: |
@@ -158,7 +157,7 @@ config:
 # build info
 
 platforms:
-  ubuntu@22.04:amd64:
+  ubuntu@24.04:amd64:
 
 
 parts:
