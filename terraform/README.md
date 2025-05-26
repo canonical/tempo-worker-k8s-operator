@@ -101,6 +101,9 @@ Then, create a `constraints.tfvars` file with the following content:
 model_name = <model-name>
 constraints = "arch=<desired-arch> mem=<desired-memory>"
 ```
+> [!NOTE]
+> See [Juju constraints](https://documentation.ubuntu.com/juju/latest/reference/constraint/#list-of-constraints) for a list of available juju constraints.
+
 Then, use terraform to deploy the module:
 ```
 terraform init
