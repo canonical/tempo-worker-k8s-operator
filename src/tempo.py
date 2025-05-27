@@ -10,7 +10,7 @@ from typing import Dict, Any
 
 import ops
 import tenacity
-from cosl.coordinated_workers.worker import Worker, CONFIG_FILE
+from coordinated_workers.worker import Worker, CONFIG_FILE
 from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
