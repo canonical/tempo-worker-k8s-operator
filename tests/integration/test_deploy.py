@@ -28,7 +28,7 @@ def test_all_active_when_coordinator_and_s3_added(juju: Juju):
 
     # WHEN deploying and integrating the minimal tempo cluster
     deploy_minio_and_s3(juju)
-    juju.deploy("tempo-coordinator-k8s", TEMPO_APP, trust=True, base="ubuntu@22.04", channel="latest/edge")
+    juju.deploy("tempo-coordinator-k8s", TEMPO_APP, trust=True, channel="edge")
     juju.integrate(TEMPO_APP + ":s3", S3_APP + ":s3-credentials")
     juju.integrate(TEMPO_APP, WORKER_APP)
 
