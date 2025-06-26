@@ -1,4 +1,4 @@
-#❗This repo is archived and its contents have been migrated to https://github.com/canonical/tempo-operators❗
+# ❗This repo is archived and its contents have been migrated to https://github.com/canonical/tempo-operators❗ 
 
 # Tempo Worker charm for Kubernetes
 
