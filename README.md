@@ -1,3 +1,5 @@
+#❗This repo is archived and its contents have been migrated to https://github.com/canonical/tempo-operators❗
+
 # Tempo Worker charm for Kubernetes
 
 [![CharmHub Badge](https://charmhub.io/tempo-worker-k8s/badge.svg)](https://charmhub.io/tempo-worker-k8s)
